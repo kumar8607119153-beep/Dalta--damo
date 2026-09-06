@@ -1,29 +1,294 @@
-name: Pionex Auto Trader
+import os
+import time
+import hmac
+import hashlib
+from urllib.parse import urlencode
 
-on:
-  schedule:
-    - cron: '*/15 * * * *'
-  workflow_dispatch:
+import requests
+from dotenv import load_dotenv
 
-jobs:
-  trade:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# ============================================================
+# BINANCE FUTURES DEMO / TESTNET CONNECTION TEST
+# No BUY / SELL order is placed by this file.
+# ============================================================
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+load_dotenv()
 
-      - name: Install dependencies
-        run: |
-          pip install requests pionex_python
+BASE_URL = os.getenv(
+    "BINANCE_FUTURES_BASE_URL",
+    "https://testnet.binancefuture.com"
+)
 
-      - name: Run Trading Script
-        env:
-          PIONEX_API_KEY: ${{ secrets.PIONEX_API_KEY }}
-          PIONEX_SECRET_KEY: ${{ secrets.PIONEX_SECRET_KEY }}
-        run: |
-          python main.py
+API_KEY = os.getenv("BINANCE_API_KEY", "")
+API_SECRET = os.getenv("BINANCE_API_SECRET", "")
+
+SYMBOL = "BTCUSDT"
+INTERVAL = "5m"
+
+
+# ============================================================
+# ENV CHECK
+# ============================================================
+
+def require_env(name, value):
+    if not value:
+        raise RuntimeError(
+            f"Missing required variable: {name}"
+        )
+    return value
+
+
+# ============================================================
+# PUBLIC REQUEST
+# ============================================================
+
+def public_get(path, params=None):
+
+    response = requests.get(
+        BASE_URL + path,
+        params=params or {},
+        timeout=20
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+
+# ============================================================
+# SIGNED REQUEST
+# ============================================================
+
+def signed_get(path, params=None):
+
+    api_key = require_env(
+        "BINANCE_API_KEY",
+        API_KEY
+    )
+
+    api_secret = require_env(
+        "BINANCE_API_SECRET",
+        API_SECRET
+    )
+
+    params = dict(params or {})
+
+    params["timestamp"] = int(
+        time.time() * 1000
+    )
+
+    params["recvWindow"] = 5000
+
+    query = urlencode(params)
+
+    signature = hmac.new(
+        api_secret.encode("utf-8"),
+        query.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+
+    params["signature"] = signature
+
+    response = requests.get(
+        BASE_URL + path,
+        params=params,
+        headers={
+            "X-MBX-APIKEY": api_key
+        },
+        timeout=20
+    )
+
+    try:
+        data = response.json()
+    except Exception:
+        data = {"raw": response.text}
+
+    if response.status_code >= 400:
+        raise RuntimeError(
+            f"Binance API Error {response.status_code}: {data}"
+        )
+
+    return data
+
+
+# ============================================================
+# SERVER TIME
+# ============================================================
+
+def check_server_time():
+
+    data = public_get(
+        "/fapi/v1/time"
+    )
+
+    print()
+    print("SERVER CONNECTION: OK")
+    print("Server time:", data["serverTime"])
+
+
+# ============================================================
+# CURRENT BTCUSDT PRICE
+# ============================================================
+
+def show_price():
+
+    data = public_get(
+        "/fapi/v1/ticker/price",
+        {
+            "symbol": SYMBOL
+        }
+    )
+
+    print()
+    print("BTCUSDT CURRENT MARKET PRICE")
+    print("Price:", data["price"])
+
+
+# ============================================================
+# LAST CLOSED 5-MINUTE CANDLE
+# ============================================================
+
+def show_last_closed_candle():
+
+    data = public_get(
+        "/fapi/v1/klines",
+        {
+            "symbol": SYMBOL,
+            "interval": INTERVAL,
+            "limit": 3
+        }
+    )
+
+    if len(data) < 2:
+        raise RuntimeError(
+            "Not enough candle data."
+        )
+
+    # Last candle may still be running.
+    # [-2] = last CLOSED candle.
+    candle = data[-2]
+
+    print()
+    print("LAST CLOSED BTCUSDT 5M CANDLE")
+    print("--------------------------------")
+
+    print("Open time :", candle[0])
+    print("Open      :", candle[1])
+    print("High      :", candle[2])
+    print("Low       :", candle[3])
+    print("Close     :", candle[4])
+    print("Volume    :", candle[5])
+    print("Close time:", candle[6])
+
+
+# ============================================================
+# DEMO ACCOUNT
+# ============================================================
+
+def check_account():
+
+    data = signed_get(
+        "/fapi/v2/account"
+    )
+
+    print()
+    print("DEMO ACCOUNT CONNECTION: OK")
+    print("--------------------------------")
+
+    print(
+        "Can Trade   :",
+        data.get("canTrade")
+    )
+
+    print(
+        "Can Deposit :",
+        data.get("canDeposit")
+    )
+
+    print(
+        "Can Withdraw:",
+        data.get("canWithdraw")
+    )
+
+    assets = data.get(
+        "assets",
+        []
+    )
+
+    print()
+    print("DEMO ACCOUNT BALANCES")
+    print("--------------------------------")
+
+    found = False
+
+    for asset in assets:
+
+        balance = float(
+            asset.get(
+                "walletBalance",
+                0
+            )
+        )
+
+        if balance != 0:
+
+            found = True
+
+            print(
+                asset["asset"],
+                "| Wallet:",
+                asset["walletBalance"],
+                "| Available:",
+                asset["availableBalance"]
+            )
+
+    if not found:
+        print("No non-zero demo balance found.")
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    print()
+    print("==============================================")
+    print(" BTCUSDT FUTURES DEMO / TESTNET")
+    print(" Binance USDⓈ-M Futures")
+    print("==============================================")
+
+    print("Base URL:", BASE_URL)
+
+    require_env(
+        "BINANCE_API_KEY",
+        API_KEY
+    )
+
+    require_env(
+        "BINANCE_API_SECRET",
+        API_SECRET
+    )
+
+    # 1. Binance server connection
+    check_server_time()
+
+    # 2. Real BTCUSDT market price
+    show_price()
+
+    # 3. Last closed 5-minute candle
+    show_last_closed_candle()
+
+    # 4. Demo account/API connection
+    check_account()
+
+    print()
+    print("==============================================")
+    print(" TEST FINISHED SUCCESSFULLY")
+    print(" NO ORDER WAS PLACED")
+    print("==============================================")
+    print()
+
+
+if __name__ == "__main__":
+    main()
