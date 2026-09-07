@@ -380,10 +380,10 @@ class DeltaFuturesBot:
                     reduce_only=True
                 )
                 def monitor_entry_orders(self) -> None:
-                print("\n========== ENTRY ORDER MONITOR ==========")
+                    print("\n========== ENTRY ORDER MONITOR ==========")
 
-    try:
-        current_price = self.api.get_ticker_price(SYMBOL)
+                    try:
+                        current_price = self.api.get_ticker_price(SYMBOL)
 
         if current_price <= 0:
             print("Current market price unavailable.")
