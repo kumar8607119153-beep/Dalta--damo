@@ -8,6 +8,9 @@ on:
 jobs:
   trade:
     runs-on: ubuntu-latest
+    concurrency:
+      group: delta-futures-bot
+      cancel-in-progress: false
 
     steps:
       - name: Checkout repository
@@ -25,8 +28,9 @@ jobs:
 
       - name: Run Delta Futures Production Bot
         env:
-          DELTA_API_KEY: ${{ secrets.DELTA_API_KEY }}
-          DELTA_API_SECRET: ${{ secrets.DELTA_API_SECRET }}
+          DELTA_API_KEY: ${{ secrets.DALTA_API_KEY }}
+          DELTA_API_SECRET: ${{ secrets.DALTA_API_SECRET }}
           DELTA_BASE_URL: ${{ secrets.DELTA_BASE_URL }}
         run: |
           python delta_futures_bot.py
+          
