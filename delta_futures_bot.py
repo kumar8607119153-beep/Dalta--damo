@@ -7,6 +7,7 @@ import os
 import sys
 import requests
 from datetime import datetime, timezone
+from decimal import Decimal
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -148,6 +149,24 @@ class DeltaAPIClient:
         if res.get("success") and isinstance(res.get("result"), list):
             return res["result"]
         return []
+        def get_ticker_price(self, symbol: str) -> float:
+    path = "/v2/tickers"
+    params = {"symbol": symbol}
+
+    res = self.request("GET", path, params=params)
+
+    if res.get("success"):
+        result = res.get("result")
+
+        if isinstance(result, list) and result:
+            result = result[0]
+
+        if isinstance(result, dict):
+            for key in ("mark_price", "close", "last_price"):
+                if result.get(key) is not None:
+                    return float(result[key])
+
+    return 0.0
 
     def place_order(self, product_id: int, size: int, side: str, order_type: str, limit_price: float = None, reduce_only: bool = False) -> dict:
         """Places a new order on Delta Exchange."""
@@ -360,6 +379,57 @@ class DeltaFuturesBot:
                     limit_price=target_price,
                     reduce_only=True
                 )
+def monitor_entry_orders(self) -> None:
+    print("\n========== ENTRY ORDER MONITOR ==========")
+
+    try:
+        current_price = self.api.get_ticker_price(SYMBOL)
+
+        if current_price <= 0:
+            print("Current market price unavailable.")
+            return
+
+        orders = self.api.get_active_orders(PRODUCT_ID)
+
+        entry_orders = [
+            o for o in orders
+            if str(o.get("reduce_only")).lower() == "false"
+        ]
+
+        print(f"Current Market Price : {current_price}")
+
+        if not entry_orders:
+            print("No OPEN/PENDING entry orders.")
+            print("=========================================")
+            return
+
+        for order in entry_orders:
+            order_id = order.get("id")
+            side = str(order.get("side", "")).upper()
+            order_price = float(
+                order.get("limit_price")
+                or order.get("price")
+                or 0
+            )
+            size = order.get("size")
+            status = order.get("state") or order.get("status") or "OPEN"
+
+            if order_price > 0:
+                distance = abs(current_price - order_price)
+
+                print("-----------------------------------------")
+                print(f"Order ID       : {order_id}")
+                print(f"Side           : {side}")
+                print(f"Order Price    : {order_price}")
+                print(f"Quantity       : {size}")
+                print(f"Current Price  : {current_price}")
+                print(f"DISTANCE       : {distance:.2f} POINTS")
+                print(f"Status         : {status}")
+
+        print("=========================================")
+
+    except Exception as e:
+        logger.error(f"Order monitor error: {e}", exc_info=True)
 
     def process_signals(self) -> None:
         candles = self.api.get_candles(SYMBOL, TIMEFRAME, count=100)
@@ -493,6 +563,10 @@ class DeltaFuturesBot:
             self.process_signals()
         except Exception as e:
             logger.error(f"Error during signal processing: {e}", exc_info=True)
+        try:
+            self.monitor_entry_orders()
+        except Exception as e:
+            logger.error(f"Error during order monitoring: {e}", exc_info=True)
 
         logger.info("Run complete. Exiting.")
 
