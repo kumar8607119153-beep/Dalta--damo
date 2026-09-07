@@ -1151,4 +1151,14 @@ def place_entry(
         "signal_price": str(signal_price),
         "status": "enabled"
         }
+
+if __name__ == "__main__":
+    while True:
+        try:
+            run_bot()
+            time.sleep(60)
+        except Exception as e:
+            print(f"Error: {e}")
+            time.sleep(30)
+    
         
