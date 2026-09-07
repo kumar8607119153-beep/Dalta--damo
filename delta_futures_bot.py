@@ -138,7 +138,7 @@ def cancel_order(self, order_id: int, product_id: int) -> dict:
     logger.info(f"Cancelling order ID: {order_id}")
     return self.request("DELETE", path, payload=payload)
 
-**⬆️ Part 1 यहाँ खत्म। नीचे Part 2 इसी फाइल में continue करें।**
+#⬆️ Part 1 यहाँ खत्म। नीचे Part 2 इसी फाइल में continue करें।**
 
 ---
 
