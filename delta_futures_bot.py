@@ -845,10 +845,10 @@ class DeltaFuturesBot:
                     limit_price=target_price,
                     reduce_only=True
                                     )
-                  def monitor_entry_orders(self) -> None:
-        print("\n========== ENTRY ORDER MONITOR ==========")
+        def monitor_entry_orders(self) -> None:
+            print("\n========== ENTRY ORDER MONITOR ==========")
 
-        try:
+                try:
             current_price = self.api.get_ticker_price(SYMBOL)
 
             if current_price <= 0:
