@@ -1144,18 +1144,11 @@ def place_entry(
             or result_data.get("order_id")
         )
 
-    state["pending_entry"] = {
-
-        "order_id":
-            order_id,
-
-        "client_order_id":
-            client_id,
-
-        "side":
-            side,
-
-        "signal_price":
-            str(signal_price),
-
-        "en
+        state["pending_entry"] = {
+        "order_id": order_id,
+        "client_order_id": client_id,
+        "side": side,
+        "signal_price": str(signal_price),
+        "status": "enabled"
+        }
+        
