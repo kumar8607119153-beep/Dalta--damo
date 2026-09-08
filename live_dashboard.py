@@ -405,20 +405,20 @@ if "locked_entry" not in st.session_state or direction != st.session_state.get("
     st.session_state["locked_entry"] = real_price if real_price else entry_val
     base_price = st.session_state["locked_entry"]
     
-    target_step = (atr_val if atr_val and atr_val > 0 else 50.0) * 1.5
+    
     
     if "BULLISH" in direction:
-        st.session_state["locked_t1"] = base_price + target_step
-        st.session_state["locked_t2"] = base_price + (target_step * 2)
-        st.session_state["locked_t3"] = base_price + (target_step * 3)
+        st.session_state["locked_t1"] = base_price + 300
+        st.session_state["locked_t2"] = base_price + 600
+        st.session_state["locked_t3"] = base_price + 900
     elif "BEARISH" in direction:
-        st.session_state["locked_t1"] = base_price - target_step
-        st.session_state["locked_t2"] = base_price - (target_step * 2)
-        st.session_state["locked_t3"] = base_price - (target_step * 3)
+        st.session_state["locked_t1"] = base_price - 300
+        st.session_state["locked_t2"] = base_price - 600
+        st.session_state["locked_t3"] = base_price - 900
     else:
-        st.session_state["locked_t1"] = base_price + 50.0
-        st.session_state["locked_t2"] = base_price + 100.0
-        st.session_state["locked_t3"] = base_price + 150.0
+        st.session_state["locked_t1"] = base_price + 300
+        st.session_state["locked_t2"] = base_price + 600
+        st.session_state["locked_t3"] = base_price + 900
         
     st.session_state["last_direction"] = direction
 
