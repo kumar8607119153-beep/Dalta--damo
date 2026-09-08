@@ -430,7 +430,7 @@ t3 = st.session_state["locked_t3"]
     
 tc1, tc2, tc3, tc4 = st.columns(4)
 with tc1:
-    st.success(f"📥 **Entry:** {show_price(entry_val)}")
+    st.success(f"📥 **Entry:** {show_price(entry_display)}")
 with tc2:
     st.warning(f"🎯 **Target 1:** {show_price(t1)}")
 with tc3:
