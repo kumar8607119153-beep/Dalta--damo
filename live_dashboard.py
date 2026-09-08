@@ -5,7 +5,7 @@
 
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import requests
 import pandas as pd
@@ -371,9 +371,11 @@ if len(signal_rows) >= 1:
     current_st = float(current["SUPERTREND"])
 
     current_time = datetime.fromtimestamp(
-        int(current["time"]),
-        tz=timezone.utc
-    ).strftime("%Y-%m-%d %H:%M:%S UTC")
+    int(current["time"]),
+    tz=timezone.utc
+).astimezone(
+    timezone(timedelta(hours=5, minutes=30))
+).strftime("%Y-%m-%d %H:%M:%S IST")
 
 
     if current_signal == "BUY":
@@ -420,9 +422,11 @@ if len(signal_rows) >= 2:
     previous_st = float(previous["SUPERTREND"])
 
     previous_time = datetime.fromtimestamp(
-        int(previous["time"]),
-        tz=timezone.utc
-    ).strftime("%Y-%m-%d %H:%M:%S UTC")
+    int(previous["time"]),
+    tz=timezone.utc
+).astimezone(
+    timezone(timedelta(hours=5, minutes=30))
+).strftime("%Y-%m-%d %H:%M:%S IST")
 
 
     if previous_signal == "BUY":
