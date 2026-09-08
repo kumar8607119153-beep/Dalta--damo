@@ -496,7 +496,8 @@ if demo_signal is not None:
             )
 
         # New Entry = current live price
-        new_entry = float(last["close"])
+        # New Entry = SuperTrend signal candle CLOSE
+new_entry = float(demo_last["close"])
 
         if demo_signal == "BUY":
             tp1 = new_entry + 300
