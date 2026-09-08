@@ -38,7 +38,7 @@ TIMEFRAME = "5m"
 CANDLE_SECONDS = 300
 
 ATR_PERIOD = int(
-    os.getenv("ST_ATR_PERIOD", "14")
+    os.getenv("ST_ATR_PERIOD", "10")
 )
 
 SUPERTREND_MULTIPLIER = float(
