@@ -2120,11 +2120,7 @@ st.write(
 # AUTO REFRESH
 # ============================================================
 
-time.sleep(
-    REFRESH_SECONDS
-)
 
-st.rerun()
 # ============================================================
 # PART 1/5
 # SANJAY RANA — REAL TRADING DASHBOARD
@@ -3006,3 +3002,5 @@ st.caption(
 # END OF PART 1
 # PART 2 = CANDLE + SUPERTREND ENGINE
 # ============================================================
+time.sleep(REFRESH_SECONDS)
+st.rerun()
