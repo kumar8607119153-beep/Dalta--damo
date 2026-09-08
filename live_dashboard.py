@@ -453,7 +453,7 @@ tradingview_widget = """
   {
     "width": "100%",
     "height": 500,
-    "symbol": "BINANCE:BTCUSDT",
+    "symbol": "DELTA:BTCUSD",
     "interval": "5",
     "timezone": "Asia/Kolkata",
     "theme": "dark",
