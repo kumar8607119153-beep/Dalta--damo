@@ -1107,4 +1107,3 @@ else:
 st.write(
     f"Signal Candle: **{previous_entry_time}**"
 )
-)
