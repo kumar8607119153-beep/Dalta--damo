@@ -1,23 +1,29 @@
-{
-  "symbol": "BTC/USDT:USDT",
-  "timeframe": "5m",
-  "supertrend_direction": "BULLISH 🟢",
-  "btc_price": "63,850.00",
-  "entry_price": "63,845.00",
-  "target_1": "63,855.00",
-  "target_2": "63,865.00",
-  "target_3": "63,875.00",
-  "trades": [
-    {
-      "Order ID": "#TX-9021",
-      "Exchange": "Delta Exchange",
-      "Asset": "BTC/USDT",
-      "Type": "BUY (Long)",
-      "Entry Price": "63,845.00",
-      "Target 1": "63,855.00",
-      "Target 2": "63,865.00",
-      "Target 3": "63,875.00",
-      "Status": "Open (Active)"
+# delta_futures_bot.py के अंदर रन फंक्शन या अंत में यह स्टेट सेव करने का कोड जोड़ें:
+def save_bot_status(self, direction, entry, t1, t2, t3, btc_price):
+    status_data = {
+        "symbol": SYMBOL,
+        "timeframe": TIMEFRAME,
+        "supertrend_direction": direction,
+        "btc_price": str(btc_price),
+        "entry_price": str(entry),
+        "target_1": str(t1),
+        "target_2": str(t2),
+        "target_3": str(t3),
+        "trades": [
+            {
+                "Order ID": "#TX-9021",
+                "Exchange": "Delta Exchange",
+                "Asset": "BTC/USDT",
+                "Type": "BUY (Long)" if "BULLISH" in direction else "SELL (Short)",
+                "Entry Price": str(entry),
+                "Target 1": str(t1),
+                "Target 2": str(t2),
+                "Target 3": str(t3),
+                "Status": "Active Bot Signal"
+            }
+        ]
     }
-  ]
-}
+    with open("bot_status.json", "w") as f:
+        json.dump(status_data, f, indent=4)
+    logger.info("bot_status.json successfully updated with live signals.")
+      
