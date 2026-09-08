@@ -425,21 +425,52 @@ st.header("💰 LIVE BTCUSD PRICE")
 st.metric("REAL MARKET PRICE", show_price(real_price))
 
 
-# Supertrend calculation check
+# ============================================================
+# TRADINGVIEW STYLE CONFIRMED SUPERTREND ENTRY
+# 5-MINUTE CLOSED CANDLE CLOSE = ENTRY
+# ============================================================
+
 direction = "UNKNOWN"
 st_line = 0.0
 atr_val = 0.0
 entry_val = real_price if real_price else 0.0
 
-if not df.empty:
-    last = df.iloc[-1]
-    trend = integer(last["Trend"])
-    st_line = number(last["SuperTrend"])
-    atr_val = number(last["ATR"])
-if trend == -1:
-    direction = "BUY / BULLISH 🟢"
-elif trend == 1:
-    direction = "SELL / BEARISH 🔴"
+if not df.empty and len(df) >= ATR_PERIOD + 2:
+
+    # Last two completed SuperTrend candles
+    prev_candle = df.iloc[-2]
+    signal_candle = df.iloc[-1]
+
+    prev_trend = integer(prev_candle["Trend"])
+    current_trend = integer(signal_candle["Trend"])
+
+    st_line = number(signal_candle["SuperTrend"])
+    atr_val = number(signal_candle["ATR"])
+
+    # --------------------------------------------------------
+    # CONFIRMED SUPERTREND REVERSAL
+    # --------------------------------------------------------
+
+    if prev_trend == 1 and current_trend == -1:
+        direction = "BUY / BULLISH 🟢"
+
+    elif prev_trend == -1 and current_trend == 1:
+        direction = "SELL / BEARISH 🔴"
+
+    elif current_trend == -1:
+        direction = "BUY / BULLISH 🟢"
+
+    elif current_trend == 1:
+        direction = "SELL / BEARISH 🔴"
+
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # ENTRY = SIGNAL 5-MINUTE CANDLE CLOSE
+    # NOT LIVE PRICE
+    # NOT SUPERTREND LINE
+    # --------------------------------------------------------
+
+    entry_val = float(signal_candle["close"])
 
 st.header("🔄 SUPERTREND & TARGETS ENGINE")
 c1, c2, c3 = st.columns(3)
