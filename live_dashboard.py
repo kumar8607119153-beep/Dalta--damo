@@ -3506,7 +3506,7 @@ components.html(
         </script>
     </div>
     """,
-    height=850,
+    height=1200,
     scrolling=False
 )
 
