@@ -496,7 +496,7 @@ if demo_signal is not None:
             )
 
         # New Entry = current live price
-        new_entry = float(real_price)
+        new_entry = float(last["close"])
 
         if demo_signal == "BUY":
             tp1 = new_entry + 300
