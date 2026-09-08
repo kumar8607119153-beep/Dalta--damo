@@ -532,7 +532,7 @@ else:
 
 
 # ============================================================
-# MEMBER LIST & REFRESH
+# MEMBER LIST & STABLE REFRESH
 # ============================================================
 
 st.header("👥 MEMBER LIST")
@@ -540,13 +540,9 @@ members = [{"Name": OWNER_NAME, "Mobile": OWNER_MOBILE, "Role": "Owner / Admin",
 st.dataframe(pd.DataFrame(members), use_container_width=True, hide_index=True)
 
 st.divider()
-st.success("REAL-DATA MODE: Delta Exchange live feed active[span_2](start_span)[span_2](end_span).")
-st.caption(f"Auto refresh: {REFRESH_SECONDS} seconds")
+st.success("REAL-DATA MODE: Delta Exchange live feed active[span_0](start_span)[span_0](end_span).")
 
-time.sleep(0.2)
-st.markdown(
-    f"""
-    <meta http-equiv="refresh" content="{REFRESH_SECONDS}">
-    """,
-    unsafe_allow_html=True
-)
+# Auto-refresh using Streamlit native rerun instead of browser meta reload (Stops flickering)
+time.sleep(REFRESH_SECONDS)
+st.rerun()
+
