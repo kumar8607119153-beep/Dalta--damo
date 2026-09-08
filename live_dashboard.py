@@ -402,7 +402,7 @@ with c3:
 # ============================================================
 
 if "locked_entry" not in st.session_state or direction != st.session_state.get("last_direction"):
-    st.session_state["locked_entry"] = float(last["close"])
+    st.session_state["locked_entry"] = float(last["SuperTrend"])
     base_price = st.session_state["locked_entry"]
     
     
