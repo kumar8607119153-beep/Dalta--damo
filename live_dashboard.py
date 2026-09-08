@@ -436,7 +436,7 @@ if not df.empty:
     trend = integer(last["Trend"])
     st_line = number(last["SuperTrend"])
     atr_val = number(last["ATR"])
-    if trend == -1:
+if trend == -1:
     direction = "BUY / BULLISH 🟢"
 elif trend == 1:
     direction = "SELL / BEARISH 🔴"
