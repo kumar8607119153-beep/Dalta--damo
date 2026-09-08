@@ -486,8 +486,7 @@ with c3:
 # ============================================================
 
 if "locked_entry" not in st.session_state or direction != st.session_state.get("last_direction"):
-    signal_candle = df.iloc[-1]
-    st.session_state["locked_entry"] = float(signal_candle["close"])
+    st.session_state["locked_entry"] = float(entry_val)
     base_price = st.session_state["locked_entry"]
     
     
