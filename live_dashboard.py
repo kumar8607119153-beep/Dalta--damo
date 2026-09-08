@@ -437,3 +437,583 @@ else:
         "🟡 SIGNAL / TEST MODE — "
         "REAL ORDERS DISABLED"
 )
+# ============================================================
+# PART 2/4
+# CANDLE DATA + SUPERTREND ENGINE
+# ============================================================
+
+def get_result(data):
+
+    if not data:
+        return None
+
+    if not data.get("success"):
+        return None
+
+    return data.get("result")
+
+
+def make_dataframe(data):
+
+    result = get_result(data)
+
+    if not isinstance(result, list):
+        return pd.DataFrame()
+
+    rows = []
+
+    for candle in result:
+        try:
+            rows.append({
+                "time": int(candle["time"]),
+                "open": float(candle["open"]),
+                "high": float(candle["high"]),
+                "low": float(candle["low"]),
+                "close": float(candle["close"]),
+                "volume": float(candle.get("volume", 0))
+            })
+        except Exception:
+            continue
+
+    if not rows:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(rows)
+
+    df = (
+        df
+        .drop_duplicates("time")
+        .sort_values("time")
+        .reset_index(drop=True)
+    )
+
+    return df
+
+
+# ============================================================
+# GET CANDLES
+# ============================================================
+
+candle_response = api.candles()
+
+df = make_dataframe(candle_response)
+
+if df.empty:
+    st.error("Delta se candle data nahi mila.")
+    st.stop()
+
+
+# ============================================================
+# ONLY COMPLETED 5-MINUTE CANDLES
+# ============================================================
+
+current_candle_start = (
+    int(time.time()) // CANDLE_SECONDS
+) * CANDLE_SECONDS
+
+df = df[
+    df["time"] < current_candle_start
+].copy()
+
+df = df.reset_index(drop=True)
+
+if len(df) < ATR_PERIOD + 5:
+    st.error("SuperTrend ke liye enough candles nahi hain.")
+    st.stop()
+
+
+# ============================================================
+# TRUE RANGE
+# ============================================================
+
+prev_close = df["close"].shift(1)
+
+tr1 = df["high"] - df["low"]
+
+tr2 = (
+    df["high"] - prev_close
+).abs()
+
+tr3 = (
+    df["low"] - prev_close
+).abs()
+
+df["TR"] = pd.concat(
+    [tr1, tr2, tr3],
+    axis=1
+).max(axis=1)
+
+
+# ============================================================
+# ATR 10 — WILDER RMA
+# ============================================================
+
+df["ATR"] = float("nan")
+
+first_atr = (
+    df["TR"]
+    .iloc[:ATR_PERIOD]
+    .mean()
+)
+
+df.loc[
+    ATR_PERIOD - 1,
+    "ATR"
+] = first_atr
+
+
+for i in range(
+    ATR_PERIOD,
+    len(df)
+):
+
+    previous_atr = df.loc[
+        i - 1,
+        "ATR"
+    ]
+
+    current_tr = df.loc[
+        i,
+        "TR"
+    ]
+
+    df.loc[
+        i,
+        "ATR"
+    ] = (
+        previous_atr * (ATR_PERIOD - 1)
+        + current_tr
+    ) / ATR_PERIOD
+
+
+# ============================================================
+# HL2
+# ============================================================
+
+df["HL2"] = (
+    df["high"] + df["low"]
+) / 2.0
+
+
+# ============================================================
+# SUPERTREND COLUMNS
+# ============================================================
+
+df["UP"] = float("nan")
+df["DN"] = float("nan")
+df["TREND"] = float("nan")
+df["SUPERTREND"] = float("nan")
+df["SIGNAL"] = ""
+
+
+# ============================================================
+# SUPERTREND CALCULATION
+#
+# ATR = 10
+# MULTIPLIER = 3.0
+# SOURCE = HL2
+#
+# TradingView direction:
+# -1 = BULLISH / BUY
+#  1 = BEARISH / SELL
+# ============================================================
+
+for i in range(len(df)):
+
+    atr = df.loc[i, "ATR"]
+
+    if pd.isna(atr):
+        continue
+
+    src = df.loc[i, "HL2"]
+
+    upper_basic = (
+        src + MULTIPLIER * atr
+    )
+
+    lower_basic = (
+        src - MULTIPLIER * atr
+    )
+
+
+    # ========================================================
+    # FIRST VALID BAR
+    # ========================================================
+
+    if i == ATR_PERIOD - 1:
+
+        df.loc[i, "UP"] = upper_basic
+        df.loc[i, "DN"] = lower_basic
+        df.loc[i, "TREND"] = 1
+        df.loc[i, "SUPERTREND"] = upper_basic
+
+        continue
+
+
+    # ========================================================
+    # PREVIOUS VALUES
+    # ========================================================
+
+    previous_up = df.loc[
+        i - 1,
+        "UP"
+    ]
+
+    previous_dn = df.loc[
+        i - 1,
+        "DN"
+    ]
+
+    previous_trend = df.loc[
+        i - 1,
+        "TREND"
+    ]
+
+    previous_close = df.loc[
+        i - 1,
+        "close"
+    ]
+
+
+    if pd.isna(previous_up):
+        previous_up = upper_basic
+
+    if pd.isna(previous_dn):
+        previous_dn = lower_basic
+
+    if pd.isna(previous_trend):
+        previous_trend = 1
+
+
+    # ========================================================
+    # LOWER BAND
+    # ========================================================
+
+    if (
+        lower_basic > previous_dn
+        or previous_close < previous_dn
+    ):
+
+        lower_band = lower_basic
+
+    else:
+
+        lower_band = previous_dn
+
+
+    # ========================================================
+    # UPPER BAND
+    # ========================================================
+
+    if (
+        upper_basic < previous_up
+        or previous_close > previous_up
+    ):
+
+        upper_band = upper_basic
+
+    else:
+
+        upper_band = previous_up
+
+
+    # ========================================================
+    # TREND
+    # ========================================================
+
+    trend = previous_trend
+
+    close = df.loc[
+        i,
+        "close"
+    ]
+
+
+    if previous_trend == 1:
+
+        if close > upper_band:
+            trend = -1
+        else:
+            trend = 1
+
+    else:
+
+        if close < lower_band:
+            trend = 1
+        else:
+            trend = -1
+
+
+    # ========================================================
+    # SAVE
+    # ========================================================
+
+    df.loc[i, "UP"] = upper_band
+
+    df.loc[i, "DN"] = lower_band
+
+    df.loc[i, "TREND"] = trend
+
+
+    # ========================================================
+    # SUPERTREND LINE
+    # ========================================================
+
+    if trend == -1:
+
+        df.loc[
+            i,
+            "SUPERTREND"
+        ] = lower_band
+
+    else:
+
+        df.loc[
+            i,
+            "SUPERTREND"
+        ] = upper_band
+
+
+    # ========================================================
+    # SIGNAL
+    # ========================================================
+
+    if (
+        trend == -1
+        and previous_trend == 1
+    ):
+
+        df.loc[
+            i,
+            "SIGNAL"
+        ] = "BUY"
+
+
+    elif (
+        trend == 1
+        and previous_trend == -1
+    ):
+
+        df.loc[
+            i,
+            "SIGNAL"
+        ] = "SELL"
+
+
+# ============================================================
+# SIGNAL HISTORY
+# ============================================================
+
+signal_rows = df[
+    df["SIGNAL"].isin(
+        ["BUY", "SELL"]
+    )
+].copy()
+
+
+# ============================================================
+# CURRENT CANDLE
+# ============================================================
+
+last_candle = df.iloc[-1]
+
+current_trend = int(
+    last_candle["TREND"]
+)
+
+current_close = float(
+    last_candle["close"]
+)
+
+current_supertrend = float(
+    last_candle["SUPERTREND"]
+)
+
+current_signal = str(
+    last_candle["SIGNAL"]
+)
+
+
+# ============================================================
+# CURRENT DIRECTION
+# ============================================================
+
+if current_trend == -1:
+
+    current_direction = "BUY / BULLISH 🟢"
+
+else:
+
+    current_direction = "SELL / BEARISH 🔴"
+
+
+# ============================================================
+# CURRENT ENTRY
+# ============================================================
+
+if len(signal_rows) >= 1:
+
+    current_entry = signal_rows.iloc[-1]
+
+    signal_direction = str(
+        current_entry["SIGNAL"]
+    )
+
+    signal_entry_price = float(
+        current_entry["close"]
+    )
+
+    signal_supertrend = float(
+        current_entry["SUPERTREND"]
+    )
+
+    signal_time = indian_time(
+        current_entry["time"]
+    )
+
+else:
+
+    signal_direction = ""
+
+    signal_entry_price = current_close
+
+    signal_supertrend = current_supertrend
+
+    signal_time = indian_time(
+        last_candle["time"]
+    )
+
+
+# ============================================================
+# PREVIOUS ENTRY
+# ============================================================
+
+if len(signal_rows) >= 2:
+
+    previous_entry = signal_rows.iloc[-2]
+
+    previous_entry_signal = str(
+        previous_entry["SIGNAL"]
+    )
+
+    previous_entry_price = float(
+        previous_entry["close"]
+    )
+
+    previous_entry_st = float(
+        previous_entry["SUPERTREND"]
+    )
+
+    previous_entry_time = indian_time(
+        previous_entry["time"]
+    )
+
+else:
+
+    previous_entry_signal = ""
+
+    previous_entry_price = None
+
+    previous_entry_st = None
+
+    previous_entry_time = "-"
+
+
+# ============================================================
+# DISPLAY
+# ============================================================
+
+st.divider()
+
+st.header("📈 SUPERTREND — 5 MINUTE")
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+
+    st.metric(
+        "CURRENT DIRECTION",
+        current_direction
+    )
+
+with c2:
+
+    st.metric(
+        "CURRENT CLOSE",
+        show_price(current_close)
+    )
+
+with c3:
+
+    st.metric(
+        "SUPERTREND",
+        show_price(current_supertrend)
+    )
+
+
+# ============================================================
+# CURRENT ENTRY
+# ============================================================
+
+st.subheader("🎯 CURRENT ENTRY")
+
+if signal_direction == "BUY":
+
+    st.success(
+        f"🟢 BUY | "
+        f"ENTRY: {show_price(signal_entry_price)} | "
+        f"SUPERTREND: {show_price(signal_supertrend)}"
+    )
+
+elif signal_direction == "SELL":
+
+    st.error(
+        f"🔴 SELL | "
+        f"ENTRY: {show_price(signal_entry_price)} | "
+        f"SUPERTREND: {show_price(signal_supertrend)}"
+    )
+
+else:
+
+    st.info(
+        "No confirmed SuperTrend entry."
+    )
+
+
+st.write(
+    f"Signal Candle: **{signal_time}**"
+)
+
+
+# ============================================================
+# PREVIOUS ENTRY
+# ============================================================
+
+st.subheader("📜 PREVIOUS ENTRY")
+
+if previous_entry_signal == "BUY":
+
+    st.success(
+        f"🟢 BUY | "
+        f"ENTRY: {show_price(previous_entry_price)} | "
+        f"SUPERTREND: {show_price(previous_entry_st)}"
+    )
+
+elif previous_entry_signal == "SELL":
+
+    st.error(
+        f"🔴 SELL | "
+        f"ENTRY: {show_price(previous_entry_price)} | "
+        f"SUPERTREND: {show_price(previous_entry_st)}"
+    )
+
+else:
+
+    st.info(
+        "Previous entry available nahi hai."
+    )
+
+
+st.write(
+    f"Signal Candle: **{previous_entry_time}**"
+                                          )
