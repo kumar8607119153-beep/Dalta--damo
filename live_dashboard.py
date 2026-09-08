@@ -397,18 +397,36 @@ with c2:
 with c3:
     st.metric("ATR (10)", show_price(atr_val))
 
-# Dynamic Targets Calculation based on Real Supertrend Trend
-if "BULLISH" in direction:
-    t1 = entry_val + (1.5 * atr_val if atr_val else 30.0)
-    t2 = entry_val + (3.0 * atr_val if atr_val else 60.0)
-    t3 = entry_val + (4.5 * atr_val if atr_val else 90.0)
-elif "BEARISH" in direction:
-    t1 = entry_val - (1.5 * atr_val if atr_val else 30.0)
-    t2 = entry_val - (3.0 * atr_val if atr_val else 60.0)
-    t3 = entry_val - (4.5 * atr_val if atr_val else 90.0)
-else:
-    t1, t2, t3 = entry_val + 20, entry_val + 40, entry_val + 60
+# ============================================================
+# LOCKED & STABLE TARGETS ENGINE (Session State Lock)
+# ============================================================
 
+if "locked_entry" not in st.session_state or direction != st.session_state.get("last_direction"):
+    st.session_state["locked_entry"] = real_price if real_price else entry_val
+    base_price = st.session_state["locked_entry"]
+    
+    target_step = (atr_val if atr_val and atr_val > 0 else 50.0) * 1.5
+    
+    if "BULLISH" in direction:
+        st.session_state["locked_t1"] = base_price + target_step
+        st.session_state["locked_t2"] = base_price + (target_step * 2)
+        st.session_state["locked_t3"] = base_price + (target_step * 3)
+    elif "BEARISH" in direction:
+        st.session_state["locked_t1"] = base_price - target_step
+        st.session_state["locked_t2"] = base_price - (target_step * 2)
+        st.session_state["locked_t3"] = base_price - (target_step * 3)
+    else:
+        st.session_state["locked_t1"] = base_price + 50.0
+        st.session_state["locked_t2"] = base_price + 100.0
+        st.session_state["locked_t3"] = base_price + 150.0
+        
+    st.session_state["last_direction"] = direction
+
+entry_display = st.session_state["locked_entry"]
+t1 = st.session_state["locked_t1"]
+t2 = st.session_state["locked_t2"]
+t3 = st.session_state["locked_t3"]
+    
 tc1, tc2, tc3, tc4 = st.columns(4)
 with tc1:
     st.success(f"📥 **Entry:** {show_price(entry_val)}")
