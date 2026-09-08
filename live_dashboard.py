@@ -422,7 +422,8 @@ if "locked_entry" not in st.session_state or direction != st.session_state.get("
         
     st.session_state["last_direction"] = direction
 
-entry_display = st.session_state["locked_entry"]
+entry_display = st.session_state["locked_entry"] = hl2_base
+        
 t1 = st.session_state["locked_t1"]
 t2 = st.session_state["locked_t2"]
 t3 = st.session_state["locked_t3"]
