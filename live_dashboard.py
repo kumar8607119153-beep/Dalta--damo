@@ -438,7 +438,211 @@ with tc3:
 with tc4:
     st.warning(f"🎯 **Target 3:** {show_price(t3)}")
 
+# ============================================================
+# 🧪 AUTOMATIC DEMO TRADING + TRADE HISTORY LIST
+# SAME SUPERTREND 10,3 HL2 LOGIC
+# NO REAL ORDERS
+# ============================================================
 
+# Demo history storage
+if "demo_trade_history" not in st.session_state:
+    st.session_state["demo_trade_history"] = []
+
+if "demo_active_trade" not in st.session_state:
+    st.session_state["demo_active_trade"] = None
+
+
+# ------------------------------------------------------------
+# CURRENT SUPERTREND SIGNAL
+# ------------------------------------------------------------
+
+demo_signal = None
+demo_entry = None
+
+if not df.empty and real_price is not None:
+
+    demo_last = df.iloc[-1]
+    demo_trend = integer(demo_last["Trend"])
+
+    if demo_trend == 1:
+        demo_signal = "BUY"
+
+    elif demo_trend == -1:
+        demo_signal = "SELL"
+
+
+# ------------------------------------------------------------
+# AUTOMATIC NEW DEMO TRADE
+# ------------------------------------------------------------
+
+active_demo = st.session_state["demo_active_trade"]
+
+if demo_signal is not None:
+
+    # New trade only when there is no active trade
+    # or SuperTrend changes direction
+    if (
+        active_demo is None
+        or active_demo["signal"] != demo_signal
+    ):
+
+        # Close previous demo trade
+        if active_demo is not None:
+
+            active_demo["status"] = "CLOSED"
+
+            st.session_state["demo_trade_history"].append(
+                active_demo.copy()
+            )
+
+        # New Entry = current live price
+        new_entry = float(real_price)
+
+        if demo_signal == "BUY":
+            tp1 = new_entry + 300
+            tp2 = new_entry + 600
+            tp3 = new_entry + 900
+
+        else:
+            tp1 = new_entry - 300
+            tp2 = new_entry - 600
+            tp3 = new_entry - 900
+
+        st.session_state["demo_active_trade"] = {
+            "signal": demo_signal,
+            "entry_time": datetime.now(
+                timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S"),
+
+            "entry_price": new_entry,
+
+            "tp1": tp1,
+            "tp2": tp2,
+            "tp3": tp3,
+
+            "tp1_hit": False,
+            "tp2_hit": False,
+            "tp3_hit": False,
+
+            "status": "OPEN"
+        }
+
+
+# ------------------------------------------------------------
+# UPDATE ACTIVE DEMO TRADE
+# ------------------------------------------------------------
+
+active_demo = st.session_state["demo_active_trade"]
+
+if active_demo is not None and real_price is not None:
+
+    entry = float(active_demo["entry_price"])
+    current = float(real_price)
+
+    # BUY
+    if active_demo["signal"] == "BUY":
+
+        pnl = current - entry
+
+        if current >= active_demo["tp1"]:
+            active_demo["tp1_hit"] = True
+
+        if current >= active_demo["tp2"]:
+            active_demo["tp2_hit"] = True
+
+        if current >= active_demo["tp3"]:
+            active_demo["tp3_hit"] = True
+
+    # SELL
+    else:
+
+        pnl = entry - current
+
+        if current <= active_demo["tp1"]:
+            active_demo["tp1_hit"] = True
+
+        if current <= active_demo["tp2"]:
+            active_demo["tp2_hit"] = True
+
+        if current <= active_demo["tp3"]:
+            active_demo["tp3_hit"] = True
+
+
+    active_demo["current_price"] = current
+    active_demo["pnl"] = pnl
+
+    # Status
+    if active_demo["tp3_hit"]:
+        active_demo["status"] = "TP3 HIT"
+    elif active_demo["tp2_hit"]:
+        active_demo["status"] = "TP2 HIT"
+    elif active_demo["tp1_hit"]:
+        active_demo["status"] = "TP1 HIT"
+    else:
+        active_demo["status"] = "OPEN"
+
+
+# ------------------------------------------------------------
+# DEMO TRADE HISTORY LIST
+# ------------------------------------------------------------
+
+st.header("🧪 DEMO TRADE HISTORY")
+
+display_rows = []
+
+# Previous trades
+for i, trade in enumerate(
+    st.session_state["demo_trade_history"], 1
+):
+
+    display_rows.append({
+        "#": i,
+        "BUY/SELL": trade["signal"],
+        "Entry Time": trade["entry_time"],
+        "Entry Price": f'{trade["entry_price"]:,.2f}',
+        "TP1": f'{trade["tp1"]:,.2f}',
+        "TP2": f'{trade["tp2"]:,.2f}',
+        "TP3": f'{trade["tp3"]:,.2f}',
+        "Current Price": f'{trade.get("current_price", trade["entry_price"]):,.2f}',
+        "P&L": f'{trade.get("pnl", 0):+,.2f}',
+        "Status": trade["status"]
+    })
+
+
+# Current active trade
+active_demo = st.session_state["demo_active_trade"]
+
+if active_demo is not None:
+
+    display_rows.append({
+        "#": len(display_rows) + 1,
+        "BUY/SELL": active_demo["signal"],
+        "Entry Time": active_demo["entry_time"],
+        "Entry Price": f'{active_demo["entry_price"]:,.2f}',
+        "TP1": f'{active_demo["tp1"]:,.2f}',
+        "TP2": f'{active_demo["tp2"]:,.2f}',
+        "TP3": f'{active_demo["tp3"]:,.2f}',
+        "Current Price": f'{active_demo.get("current_price", active_demo["entry_price"]):,.2f}',
+        "P&L": f'{active_demo.get("pnl", 0):+,.2f}',
+        "Status": active_demo["status"]
+    })
+
+
+if display_rows:
+
+    st.dataframe(
+        pd.DataFrame(display_rows),
+        use_container_width=True,
+        hide_index=True
+    )
+
+else:
+
+    st.info("No demo trades yet.")
+
+st.caption(
+    "DEMO ONLY — No real Delta Exchange orders are placed."
+)
 # ============================================================
 # REAL TRADINGVIEW WIDGET + PLOTLY CHART
 # ============================================================
