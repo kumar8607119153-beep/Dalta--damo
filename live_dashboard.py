@@ -437,6 +437,474 @@ else:
         "🟡 SIGNAL / TEST MODE — "
         "REAL ORDERS DISABLED"
 )
+    # ============================================================
+# OWNER API + MEMBER API CONTROL
+# PLACE THIS DIRECTLY BELOW PART 1
+# ============================================================
+
+st.divider()
+
+# ============================================================
+# OWNER API
+# ============================================================
+
+st.header("👑 OWNER API")
+
+owner_col1, owner_col2 = st.columns(2)
+
+with owner_col1:
+
+    owner_api_key_input = st.text_input(
+        "🔑 Owner API Key",
+        type="password",
+        key="owner_api_key_input"
+    )
+
+with owner_col2:
+
+    owner_api_secret_input = st.text_input(
+        "🔐 Owner API Secret",
+        type="password",
+        key="owner_api_secret_input"
+    )
+
+
+if st.button(
+    "🔗 TEST OWNER API",
+    key="test_owner_api_button"
+):
+
+    if (
+        not owner_api_key_input
+        or not owner_api_secret_input
+    ):
+
+        st.error(
+            "❌ Owner API Key और API Secret दोनों डालें।"
+        )
+
+    else:
+
+        try:
+
+            owner_client = DeltaAPI(
+                owner_api_key_input,
+                owner_api_secret_input
+            )
+
+            owner_result = owner_client.position()
+
+            if owner_result.get("success"):
+
+                st.success(
+                    "🟢 OWNER API CONNECTED"
+                )
+
+                st.session_state[
+                    "owner_api_connected"
+                ] = True
+
+                st.session_state[
+                    "owner_api_key"
+                ] = owner_api_key_input
+
+                st.session_state[
+                    "owner_api_secret"
+                ] = owner_api_secret_input
+
+            else:
+
+                st.error(
+                    "🔴 OWNER API CONNECTION FAILED"
+                )
+
+                st.session_state[
+                    "owner_api_connected"
+                ] = False
+
+                st.write(
+                    owner_result.get(
+                        "error"
+                    )
+                )
+
+        except Exception as e:
+
+            st.error(
+                f"❌ Owner API Error: {e}"
+            )
+
+
+# ============================================================
+# OWNER STATUS
+# ============================================================
+
+if st.session_state.get(
+    "owner_api_connected",
+    False
+):
+
+    st.success(
+        "👑 Owner Status: CONNECTED"
+    )
+
+else:
+
+    st.warning(
+        "👑 Owner Status: NOT CONNECTED"
+    )
+
+
+# ============================================================
+# MEMBER SYSTEM
+# ============================================================
+
+st.divider()
+
+st.header(
+    "👥 MEMBER API CONTROL"
+)
+
+st.caption(
+    "जितने चाहें Members जोड़ सकते हैं। "
+    "हर Member की अलग API होगी।"
+)
+
+
+# ============================================================
+# MEMBER STORAGE
+# ============================================================
+
+if "members" not in st.session_state:
+
+    st.session_state["members"] = []
+
+
+# ============================================================
+# ADD MEMBER
+# ============================================================
+
+if st.button(
+    "➕ ADD MEMBER",
+    key="add_member_button"
+):
+
+    member_number = (
+        len(
+            st.session_state["members"]
+        ) + 1
+    )
+
+    st.session_state[
+        "members"
+    ].append({
+
+        "name":
+            f"Member {member_number}",
+
+        "api_key":
+            "",
+
+        "api_secret":
+            "",
+
+        "connected":
+            False,
+
+        "active":
+            False
+    })
+
+
+# ============================================================
+# MEMBER COUNT
+# ============================================================
+
+st.info(
+    f"👥 Total Members: "
+    f"{len(st.session_state['members'])}"
+)
+
+
+# ============================================================
+# MEMBER CARDS
+# ============================================================
+
+for index, member in enumerate(
+    st.session_state["members"]
+):
+
+    st.markdown("---")
+
+    st.subheader(
+        f"👤 {member['name']}"
+    )
+
+
+    # --------------------------------------------------------
+    # MEMBER NAME
+    # --------------------------------------------------------
+
+    member["name"] = st.text_input(
+
+        "Member Name",
+
+        value=member["name"],
+
+        key=f"member_name_{index}"
+    )
+
+
+    # --------------------------------------------------------
+    # MEMBER API KEY
+    # --------------------------------------------------------
+
+    api_col1, api_col2 = st.columns(2)
+
+
+    with api_col1:
+
+        member["api_key"] = st.text_input(
+
+            "🔑 Member API Key",
+
+            value=member["api_key"],
+
+            type="password",
+
+            key=f"member_api_key_{index}"
+        )
+
+
+    with api_col2:
+
+        member["api_secret"] = st.text_input(
+
+            "🔐 Member API Secret",
+
+            value=member["api_secret"],
+
+            type="password",
+
+            key=f"member_api_secret_{index}"
+        )
+
+
+    # --------------------------------------------------------
+    # TEST MEMBER API
+    # --------------------------------------------------------
+
+    if st.button(
+
+        "🔗 TEST MEMBER API",
+
+        key=f"test_member_api_{index}"
+    ):
+
+        if not member["api_key"]:
+
+            member["connected"] = False
+
+            st.error(
+                "❌ Member API Key खाली है।"
+            )
+
+        elif not member["api_secret"]:
+
+            member["connected"] = False
+
+            st.error(
+                "❌ Member API Secret खाली है।"
+            )
+
+        else:
+
+            try:
+
+                member_client = DeltaAPI(
+
+                    member["api_key"],
+
+                    member["api_secret"]
+                )
+
+
+                result = member_client.position()
+
+
+                if result.get("success"):
+
+                    member["connected"] = True
+
+                    st.success(
+                        "🟢 MEMBER API CONNECTED"
+                    )
+
+                else:
+
+                    member["connected"] = False
+
+                    st.error(
+                        "🔴 MEMBER API CONNECTION FAILED"
+                    )
+
+                    st.write(
+                        result.get(
+                            "error"
+                        )
+                    )
+
+
+            except Exception as e:
+
+                member["connected"] = False
+
+                st.error(
+                    f"❌ Member API Error: {e}"
+                )
+
+
+    # --------------------------------------------------------
+    # MEMBER CONNECTION STATUS
+    # --------------------------------------------------------
+
+    if member["connected"]:
+
+        st.success(
+            "🟢 API CONNECTED"
+        )
+
+    else:
+
+        st.warning(
+            "🟡 API NOT CONNECTED"
+        )
+
+
+    # --------------------------------------------------------
+    # MEMBER ACTIVE CONTROL
+    # --------------------------------------------------------
+
+    member_active = st.toggle(
+
+        "🎛️ MEMBER ACTIVE / REAL TRADING",
+
+        value=member["active"],
+
+        key=f"member_active_{index}"
+    )
+
+
+    if member_active:
+
+        if member["connected"]:
+
+            member["active"] = True
+
+            st.error(
+                f"🔴 {member['name']} "
+                "REAL TRADING ACTIVE"
+            )
+
+        else:
+
+            member["active"] = False
+
+            st.warning(
+                "⚠️ पहले API CONNECT करें। "
+                "फिर Member Active करें।"
+            )
+
+    else:
+
+        member["active"] = False
+
+        st.success(
+            f"🟢 {member['name']} — TRADING OFF"
+        )
+
+
+    # --------------------------------------------------------
+    # REMOVE MEMBER
+    # --------------------------------------------------------
+
+    if st.button(
+
+        "🗑️ REMOVE MEMBER",
+
+        key=f"remove_member_{index}"
+    ):
+
+        st.session_state[
+            "members"
+        ].pop(index)
+
+        st.rerun()
+
+
+# ============================================================
+# ACTIVE MEMBER SUMMARY
+# ============================================================
+
+st.divider()
+
+st.subheader(
+    "📊 MEMBER SUMMARY"
+)
+
+
+if st.session_state["members"]:
+
+    summary = []
+
+    for member in st.session_state["members"]:
+
+        summary.append({
+
+            "Member":
+                member["name"],
+
+            "API":
+                (
+                    "CONNECTED"
+                    if member["connected"]
+                    else "NOT CONNECTED"
+                ),
+
+            "Trading":
+                (
+                    "ACTIVE"
+                    if member["active"]
+                    else "OFF"
+                )
+        })
+
+
+    st.dataframe(
+
+        pd.DataFrame(summary),
+
+        use_container_width=True,
+
+        hide_index=True
+    )
+
+else:
+
+    st.info(
+        "अभी कोई Member नहीं जोड़ा गया है।"
+    )
+
+
+# ============================================================
+# END — OWNER + MEMBER API BLOCK
+#
+# PART 2 इसके नीचे आएगा।
+# PART 3 इसके बाद।
+# PART 4 सबसे बाद।
+#
+# FINAL st.rerun() पूरी file के बिल्कुल अंत में रहेगा।
+# ============================================================
 # ============================================================
 # PART 2/4
 # CANDLE DATA + SUPERTREND ENGINE
