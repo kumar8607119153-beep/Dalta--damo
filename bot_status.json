@@ -1,19 +1,22 @@
 {
-  "active_exchanges_count": 2,
-  "exchange_names": "Binance Futures, Data Exchange",
-  "active_members_count": 1,
-  "system_health": "Operational",
+  "symbol": "BTC/USDT:USDT",
+  "timeframe": "5m",
   "supertrend_direction": "BULLISH 🟢",
-  "entry_price": "63,500.00",
-  "target_price": "65,200.00",
+  "btc_price": "63,850.00",
+  "entry_price": "63,845.00",
+  "target_1": "63,855.00",
+  "target_2": "63,865.00",
+  "target_3": "63,875.00",
   "trades": [
     {
       "Order ID": "#TX-9021",
-      "Exchange": "Data Exchange",
-      "Asset": "BTCUSDT",
+      "Exchange": "Delta Exchange",
+      "Asset": "BTC/USDT",
       "Type": "BUY (Long)",
-      "Entry Price": "63,500.00",
-      "Target Price": "65,200.00",
+      "Entry Price": "63,845.00",
+      "Target 1": "63,855.00",
+      "Target 2": "63,865.00",
+      "Target 3": "63,875.00",
       "Status": "Open (Active)"
     }
   ]
