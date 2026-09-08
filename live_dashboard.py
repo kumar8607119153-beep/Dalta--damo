@@ -436,10 +436,10 @@ if not df.empty:
     trend = integer(last["Trend"])
     st_line = number(last["SuperTrend"])
     atr_val = number(last["ATR"])
-    if trend == 1:
-        direction = "BUY / BULLISH 🟢"
-    elif trend == -1:
-        direction = "SELL / BEARISH 🔴"
+    if trend == -1:
+    direction = "BUY / BULLISH 🟢"
+elif trend == 1:
+    direction = "SELL / BEARISH 🔴"
 
 st.header("🔄 SUPERTREND & TARGETS ENGINE")
 c1, c2, c3 = st.columns(3)
