@@ -37,13 +37,13 @@ PRODUCT_ID = int(os.getenv("DELTA_PRODUCT_ID", "27"))
 TIMEFRAME = "5m"
 CANDLE_SECONDS = 300
 
-ATR_PERIOD = int(
-    os.getenv("ST_ATR_PERIOD", "10")
-)
+# ============================================================
+# CONFIG (ATR 10, Multiplier 3.0, HL2 Engine)
+# ============================================================
 
-SUPERTREND_MULTIPLIER = float(
-    os.getenv("ST_MULTIPLIER", "3.0")
-)
+ATR_PERIOD = 10
+SUPERTREND_MULTIPLIER = 3.0
+
 
 REFRESH_SECONDS = max(
     3,
