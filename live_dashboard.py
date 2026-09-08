@@ -2125,3 +2125,884 @@ time.sleep(
 )
 
 st.rerun()
+# ============================================================
+# PART 1/5
+# SANJAY RANA — REAL TRADING DASHBOARD
+# OWNER API + MEMBER SYSTEM + BASIC CONFIG
+# ============================================================
+
+import os
+import time
+import hmac
+import hashlib
+from datetime import datetime, timezone, timedelta
+
+import requests
+import pandas as pd
+import streamlit as st
+
+
+# ============================================================
+# BASIC SETTINGS
+# ============================================================
+
+OWNER_NAME = "Sanjay Rana"
+
+BASE_URL = os.getenv(
+    "DELTA_BASE_URL",
+    "https://api.india.delta.exchange"
+).rstrip("/")
+
+SYMBOL = os.getenv(
+    "DELTA_SYMBOL",
+    "BTCUSD"
+)
+
+PRODUCT_ID = int(
+    os.getenv(
+        "DELTA_PRODUCT_ID",
+        "27"
+    )
+)
+
+TIMEFRAME = "5m"
+
+CANDLE_SECONDS = 300
+
+ATR_PERIOD = 10
+
+SUPERTREND_MULTIPLIER = 3.0
+
+REFRESH_SECONDS = max(
+    3,
+    int(
+        os.getenv(
+            "DASHBOARD_REFRESH",
+            "5"
+        )
+    )
+)
+
+
+# ============================================================
+# ORDER SETTINGS
+# ============================================================
+
+DEFAULT_ORDER_SIZE = int(
+    os.getenv(
+        "ORDER_SIZE",
+        "1"
+    )
+)
+
+DEFAULT_BUY_OFFSET = float(
+    os.getenv(
+        "BUY_OFFSET",
+        "-50"
+    )
+)
+
+DEFAULT_SELL_OFFSET = float(
+    os.getenv(
+        "SELL_OFFSET",
+        "50"
+    )
+)
+
+DEFAULT_LIMIT_TIMEOUT = int(
+    os.getenv(
+        "LIMIT_TIMEOUT",
+        "60"
+    )
+)
+
+
+# ============================================================
+# TARGET SETTINGS
+# ============================================================
+
+TARGET_1 = float(
+    os.getenv(
+        "TARGET_1",
+        "300"
+    )
+)
+
+TARGET_2 = float(
+    os.getenv(
+        "TARGET_2",
+        "600"
+    )
+)
+
+TARGET_3 = float(
+    os.getenv(
+        "TARGET_3",
+        "900"
+    )
+)
+
+
+# ============================================================
+# OWNER API
+#
+# OWNER API environment variables se li jayegi.
+# Code ke andar secret hard-code nahi karna.
+# ============================================================
+
+OWNER_API_KEY = os.getenv(
+    "DELTA_API_KEY",
+    ""
+)
+
+OWNER_API_SECRET = os.getenv(
+    "DELTA_API_SECRET",
+    "")
+
+
+# ============================================================
+# INDIAN TIME
+# ============================================================
+
+IST = timezone(
+    timedelta(
+        hours=5,
+        minutes=30
+    )
+)
+
+
+def indian_time(timestamp=None):
+
+    try:
+
+        if timestamp is None:
+
+            dt = datetime.now(
+                timezone.utc
+            )
+
+        else:
+
+            ts = int(
+                float(timestamp)
+            )
+
+            if ts > 10_000_000_000:
+                ts = ts // 1000
+
+            dt = datetime.fromtimestamp(
+                ts,
+                tz=timezone.utc
+            )
+
+        return dt.astimezone(
+            IST
+        ).strftime(
+            "%Y-%m-%d %H:%M:%S IST"
+        )
+
+    except Exception:
+
+        return "-"
+
+
+# ============================================================
+# NUMBER HELPERS
+# ============================================================
+
+def number(
+    value,
+    default=None
+):
+
+    try:
+
+        if value is None:
+            return default
+
+        return float(value)
+
+    except Exception:
+
+        return default
+
+
+def integer(
+    value,
+    default=0
+):
+
+    try:
+
+        return int(
+            float(value)
+        )
+
+    except Exception:
+
+        return default
+
+
+def show_price(value):
+
+    value = number(
+        value
+    )
+
+    if value is None:
+        return "DATA UNAVAILABLE"
+
+    return f"{value:,.2f}"
+
+
+def show_pnl(value):
+
+    value = number(
+        value,
+        0
+    )
+
+    if value > 0:
+
+        return f"+₹{value:,.2f}"
+
+    if value < 0:
+
+        return f"-₹{abs(value):,.2f}"
+
+    return "₹0.00"
+
+
+# ============================================================
+# PAGE
+# ============================================================
+
+st.set_page_config(
+    page_title="Sanjay Rana Real Trading",
+    page_icon="📈",
+    layout="wide"
+)
+
+
+st.title(
+    "📈 SANJAY RANA — REAL TRADING DASHBOARD"
+)
+
+
+st.caption(
+    "Delta Exchange India | "
+    "5 Minute | ATR 10 | Multiplier 3.0 | HL2"
+)
+
+
+# ============================================================
+# DELTA API CLIENT
+# ============================================================
+
+class DeltaAPI:
+
+    def __init__(
+        self,
+        api_key="",
+        api_secret=""
+    ):
+
+        self.api_key = api_key
+
+        self.api_secret = api_secret
+
+        self.session = requests.Session()
+
+
+    # ========================================================
+    # SIGNATURE
+    # ========================================================
+
+    def signature(
+        self,
+        method,
+        timestamp,
+        path,
+        query_string="",
+        body=""
+    ):
+
+        message = (
+            method.upper()
+            + timestamp
+            + path
+            + query_string
+            + body
+        )
+
+        return hmac.new(
+
+            self.api_secret.encode(
+                "utf-8"
+            ),
+
+            message.encode(
+                "utf-8"
+            ),
+
+            hashlib.sha256
+
+        ).hexdigest()
+
+
+    # ========================================================
+    # REQUEST
+    # ========================================================
+
+    def request(
+        self,
+        method,
+        path,
+        params=None,
+        body="",
+        private=False
+    ):
+
+        params = params or {}
+
+        headers = {
+
+            "Accept":
+                "application/json",
+
+            "User-Agent":
+                "Sanjay-Rana-Real-Trading"
+        }
+
+
+        if private:
+
+            if (
+                not self.api_key
+                or not self.api_secret
+            ):
+
+                return {
+
+                    "success": False,
+
+                    "error":
+                        "API credentials missing"
+                }
+
+
+            query_string = ""
+
+            if params:
+
+                query_parts = []
+
+                for key, value in params.items():
+
+                    query_parts.append(
+                        f"{key}={value}"
+                    )
+
+                query_string = (
+                    "?"
+                    + "&".join(
+                        query_parts
+                    )
+                )
+
+
+            timestamp = str(
+                int(
+                    time.time()
+                )
+            )
+
+
+            signature = self.signature(
+
+                method,
+
+                timestamp,
+
+                path,
+
+                query_string,
+
+                body
+            )
+
+
+            headers.update({
+
+                "api-key":
+                    self.api_key,
+
+                "timestamp":
+                    timestamp,
+
+                "signature":
+                    signature,
+
+                "Content-Type":
+                    "application/json"
+            })
+
+
+        try:
+
+            response = self.session.request(
+
+                method.upper(),
+
+                BASE_URL + path,
+
+                params=params,
+
+                data=body
+                if body
+                else None,
+
+                headers=headers,
+
+                timeout=15
+            )
+
+
+            try:
+
+                data = response.json()
+
+            except Exception:
+
+                return {
+
+                    "success": False,
+
+                    "error":
+                        "Invalid API response"
+                }
+
+
+            if not response.ok:
+
+                return {
+
+                    "success": False,
+
+                    "error": data
+                }
+
+
+            return data
+
+
+        except requests.RequestException as e:
+
+            return {
+
+                "success": False,
+
+                "error": str(e)
+            }
+
+
+    # ========================================================
+    # PUBLIC TICKER
+    # ========================================================
+
+    def ticker(self):
+
+        return self.request(
+
+            "GET",
+
+            f"/v2/tickers/{SYMBOL}"
+        )
+
+
+    # ========================================================
+    # CANDLES
+    # ========================================================
+
+    def candles(self):
+
+        end = int(
+            time.time()
+        )
+
+        start = (
+            end
+            - (
+                500
+                * CANDLE_SECONDS
+            )
+        )
+
+
+        return self.request(
+
+            "GET",
+
+            "/v2/history/candles",
+
+            {
+
+                "symbol":
+                    SYMBOL,
+
+                "resolution":
+                    TIMEFRAME,
+
+                "start":
+                    start,
+
+                "end":
+                    end
+            }
+        )
+
+
+    # ========================================================
+    # POSITION
+    # ========================================================
+
+    def position(self):
+
+        return self.request(
+
+            "GET",
+
+            "/v2/positions",
+
+            {
+                "product_id":
+                    PRODUCT_ID
+            },
+
+            private=True
+        )
+
+
+    # ========================================================
+    # OPEN ORDERS
+    # ========================================================
+
+    def open_orders(self):
+
+        return self.request(
+
+            "GET",
+
+            "/v2/orders",
+
+            {
+
+                "product_ids":
+                    str(PRODUCT_ID),
+
+                "states":
+                    "open,pending"
+            },
+
+            private=True
+        )
+
+
+    # ========================================================
+    # FILLS
+    # ========================================================
+
+    def fills(self):
+
+        return self.request(
+
+            "GET",
+
+            "/v2/fills",
+
+            {
+
+                "product_ids":
+                    str(PRODUCT_ID),
+
+                "page_size":
+                    100
+            },
+
+            private=True
+        )
+
+
+    # ========================================================
+    # ORDER HISTORY
+    # ========================================================
+
+    def order_history(self):
+
+        return self.request(
+
+            "GET",
+
+            "/v2/orders/history",
+
+            {
+
+                "product_ids":
+                    str(PRODUCT_ID),
+
+                "page_size":
+                    100
+            },
+
+            private=True
+        )
+
+
+# ============================================================
+# OWNER API CLIENT
+# ============================================================
+
+owner_api = DeltaAPI(
+
+    OWNER_API_KEY,
+
+    OWNER_API_SECRET
+)
+
+
+# ============================================================
+# SESSION STATE
+#
+# Unlimited members ke liye list.
+# 5 ki koi fixed limit nahi.
+# ============================================================
+
+if "members" not in st.session_state:
+
+    st.session_state["members"] = []
+
+
+if "remote_trading" not in st.session_state:
+
+    st.session_state["remote_trading"] = False
+
+
+if "last_signal_time" not in st.session_state:
+
+    st.session_state["last_signal_time"] = ""
+
+
+if "last_signal_direction" not in st.session_state:
+
+    st.session_state[
+        "last_signal_direction"
+    ] = ""
+
+
+# ============================================================
+# OWNER CONNECTION
+# ============================================================
+
+st.divider()
+
+st.header(
+    "👑 OWNER / ADMIN CONNECTION"
+)
+
+
+if OWNER_API_KEY and OWNER_API_SECRET:
+
+    st.success(
+        "🟢 Owner API credentials available"
+    )
+
+else:
+
+    st.warning(
+        "🟡 Owner API अभी configure नहीं है."
+    )
+
+
+# ============================================================
+# OWNER API TEST
+# ============================================================
+
+if st.button(
+    "🔗 TEST OWNER API",
+    key="owner_api_test"
+):
+
+    if (
+        not OWNER_API_KEY
+        or not OWNER_API_SECRET
+    ):
+
+        st.error(
+            "Owner API Key और API Secret missing हैं."
+        )
+
+    else:
+
+        owner_test = owner_api.ticker()
+
+
+        if owner_test.get(
+            "success"
+        ):
+
+            st.success(
+                "🟢 OWNER API CONNECTED"
+            )
+
+        else:
+
+            st.error(
+                "🔴 OWNER API CONNECTION FAILED"
+            )
+
+            st.write(
+                owner_test.get(
+                    "error"
+                )
+            )
+
+
+# ============================================================
+# GLOBAL REMOTE CONTROL
+# ============================================================
+
+st.divider()
+
+st.header(
+    "🎛️ MASTER REMOTE CONTROL"
+)
+
+
+master_remote = st.toggle(
+
+    "REAL TRADING MASTER ON/OFF",
+
+    value=st.session_state[
+        "remote_trading"
+    ],
+
+    key="master_remote_control"
+)
+
+
+st.session_state[
+    "remote_trading"
+] = master_remote
+
+
+if master_remote:
+
+    st.error(
+        "🔴 MASTER REAL TRADING = ON"
+    )
+
+else:
+
+    st.success(
+        "🟢 MASTER REAL TRADING = OFF"
+    )
+
+
+# ============================================================
+# BASIC SETTINGS DISPLAY
+# ============================================================
+
+st.divider()
+
+st.header(
+    "⚙️ TRADING SETTINGS"
+)
+
+
+s1, s2, s3, s4 = st.columns(4)
+
+
+with s1:
+
+    st.metric(
+        "SYMBOL",
+        SYMBOL
+    )
+
+
+with s2:
+
+    st.metric(
+        "TIMEFRAME",
+        TIMEFRAME
+    )
+
+
+with s3:
+
+    st.metric(
+        "ATR",
+        str(ATR_PERIOD)
+    )
+
+
+with s4:
+
+    st.metric(
+        "MULTIPLIER",
+        str(SUPERTREND_MULTIPLIER)
+    )
+
+
+# ============================================================
+# TARGET SETTINGS
+# ============================================================
+
+st.subheader(
+    "🎯 DEFAULT TARGETS"
+)
+
+
+tc1, tc2, tc3 = st.columns(3)
+
+
+with tc1:
+
+    st.metric(
+        "TARGET 1",
+        f"{TARGET_1:.0f} POINTS"
+    )
+
+
+with tc2:
+
+    st.metric(
+        "TARGET 2",
+        f"{TARGET_2:.0f} POINTS"
+    )
+
+
+with tc3:
+
+    st.metric(
+        "TARGET 3",
+        f"{TARGET_3:.0f} POINTS"
+    )
+
+
+# ============================================================
+# CURRENT SERVER TIME
+# ============================================================
+
+st.divider()
+
+st.caption(
+    "Dashboard Time: "
+    + indian_time()
+)
+
+# ============================================================
+# END OF PART 1
+# PART 2 = CANDLE + SUPERTREND ENGINE
+# ============================================================
