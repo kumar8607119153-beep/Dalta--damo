@@ -1,17 +1,19 @@
 {
-  "active_exchanges_count": 1,
-  "exchange_names": "Binance Futures (Connected)",
+  "active_exchanges_count": 2,
+  "exchange_names": "Binance Futures, Data Exchange",
   "active_members_count": 1,
   "system_health": "Operational",
-  "supertrend_status": "BULLISH (Buy Signal Active at $64,280)",
+  "supertrend_direction": "BULLISH 🟢",
+  "entry_price": "63,500.00",
+  "target_price": "65,200.00",
   "trades": [
     {
       "Order ID": "#TX-9021",
-      "Exchange": "Binance Futures",
+      "Exchange": "Data Exchange",
       "Asset": "BTCUSDT",
       "Type": "BUY (Long)",
-      "Entry Price": "64,150.00",
-      "Live P&L ($)": "+$180.50",
+      "Entry Price": "63,500.00",
+      "Target Price": "65,200.00",
       "Status": "Open (Active)"
     }
   ]
