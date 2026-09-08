@@ -262,73 +262,126 @@ def make_dataframe(data):
 
 
 def calculate_supertrend(df):
-    if len(df) < ATR_PERIOD + 1:
+    """
+    TradingView ta.supertrend() equivalent
+    Factor = 3.0
+    ATR Length = 10
+    Source = HL2
+    Timeframe = 5 minutes
+    """
+
+    if len(df) < ATR_PERIOD:
         return pd.DataFrame()
 
-    tr = []
-    for i in range(len(df)):
-        high = float(df.iloc[i]["high"])
-        low = float(df.iloc[i]["low"])
-        if i == 0:
-            value = high - low
-        else:
-            previous_close = float(df.iloc[i - 1]["close"])
-            value = max(high - low, abs(high - previous_close), abs(low - previous_close))
-        tr.append(value)
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    close = df["close"].astype(float)
 
-    atr = [0.0] * len(df)
-    atr[ATR_PERIOD - 1] = sum(tr[:ATR_PERIOD]) / ATR_PERIOD
+    # -----------------------------
+    # TradingView True Range
+    # -----------------------------
+    prev_close = close.shift(1)
+
+    tr1 = high - low
+    tr2 = (high - prev_close).abs()
+    tr3 = (low - prev_close).abs()
+
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+    # -----------------------------
+    # TradingView RMA / ATR
+    # ta.atr(10)
+    # -----------------------------
+    atr = pd.Series(index=df.index, dtype=float)
+
+    atr.iloc[ATR_PERIOD - 1] = tr.iloc[:ATR_PERIOD].mean()
+
     for i in range(ATR_PERIOD, len(df)):
-        atr[i] = ((atr[i - 1] * (ATR_PERIOD - 1)) + tr[i]) / ATR_PERIOD
+        atr.iloc[i] = (
+            atr.iloc[i - 1] * (ATR_PERIOD - 1) + tr.iloc[i]
+        ) / ATR_PERIOD
 
-    upper = [0.0] * len(df)
-    lower = [0.0] * len(df)
-    trend = [1] * len(df)
-    supertrend = [0.0] * len(df)
+    # -----------------------------
+    # TradingView SuperTrend
+    # ta.supertrend(3, 10)
+    # -----------------------------
+    hl2 = (high + low) / 2.0
+
+    upper_basic = hl2 + SUPERTREND_MULTIPLIER * atr
+    lower_basic = hl2 - SUPERTREND_MULTIPLIER * atr
+
+    upper_band = pd.Series(index=df.index, dtype=float)
+    lower_band = pd.Series(index=df.index, dtype=float)
+
+    direction = pd.Series(index=df.index, dtype=int)
+    supertrend = pd.Series(index=df.index, dtype=float)
 
     for i in range(len(df)):
+
         if i < ATR_PERIOD - 1:
             continue
-        high = float(df.iloc[i]["high"])
-        low = float(df.iloc[i]["low"])
-        close = float(df.iloc[i]["close"])
-        hl2 = (high + low) / 2.0
-        basic_upper = hl2 + SUPERTREND_MULTIPLIER * atr[i]
-        basic_lower = hl2 - SUPERTREND_MULTIPLIER * atr[i]
 
         if i == ATR_PERIOD - 1:
-            upper[i] = basic_upper
-            lower[i] = basic_lower
-            trend[i] = 1
-            supertrend[i] = lower[i]
+
+            upper_band.iloc[i] = upper_basic.iloc[i]
+            lower_band.iloc[i] = lower_basic.iloc[i]
+
+            # TradingView ta.supertrend initial direction
+            direction.iloc[i] = 1
+
+            supertrend.iloc[i] = upper_band.iloc[i]
+
         else:
-            previous_close = float(df.iloc[i - 1]["close"])
-            previous_upper = upper[i - 1]
-            previous_lower = lower[i - 1]
 
-            upper[i] = basic_upper if (basic_upper < previous_upper or previous_close > previous_upper) else previous_upper
-            lower[i] = basic_lower if (basic_lower > previous_lower or previous_close < previous_lower) else previous_lower
-
-            previous_trend = trend[i - 1]
-            if previous_trend == 1:
-                if close < lower[i]:
-                    trend[i] = -1
-                    supertrend[i] = upper[i]
-                else:
-                    trend[i] = 1
-                    supertrend[i] = lower[i]
+            # TradingView final lower band
+            if (
+                lower_basic.iloc[i] > lower_band.iloc[i - 1]
+                or close.iloc[i - 1] < lower_band.iloc[i - 1]
+            ):
+                lower_band.iloc[i] = lower_basic.iloc[i]
             else:
-                if close > upper[i]:
-                    trend[i] = 1
-                    supertrend[i] = lower[i]
+                lower_band.iloc[i] = lower_band.iloc[i - 1]
+
+            # TradingView final upper band
+            if (
+                upper_basic.iloc[i] < upper_band.iloc[i - 1]
+                or close.iloc[i - 1] > upper_band.iloc[i - 1]
+            ):
+                upper_band.iloc[i] = upper_basic.iloc[i]
+            else:
+                upper_band.iloc[i] = upper_band.iloc[i - 1]
+
+            # -----------------------------
+            # TradingView direction logic
+            # -1 = Bullish / UP
+            #  1 = Bearish / DOWN
+            # -----------------------------
+            if direction.iloc[i - 1] == 1:
+
+                if close.iloc[i] > upper_band.iloc[i]:
+                    direction.iloc[i] = -1
                 else:
-                    trend[i] = -1
-                    supertrend[i] = upper[i]
+                    direction.iloc[i] = 1
+
+            else:
+
+                if close.iloc[i] < lower_band.iloc[i]:
+                    direction.iloc[i] = 1
+                else:
+                    direction.iloc[i] = -1
+
+            # TradingView SuperTrend line
+            if direction.iloc[i] == -1:
+                supertrend.iloc[i] = lower_band.iloc[i]
+            else:
+                supertrend.iloc[i] = upper_band.iloc[i]
 
     result = df.copy()
+
     result["ATR"] = atr
-    result["Trend"] = trend
+    result["Trend"] = direction
     result["SuperTrend"] = supertrend
+
     return result
 
 
