@@ -395,7 +395,7 @@ with c1:
 with c2:
     st.metric("SUPERTREND", show_price(st_line))
 with c3:
-    st.metric("ATR (14)", show_price(atr_val))
+    st.metric("ATR (10)", show_price(atr_val))
 
 # Dynamic Targets Calculation based on Real Supertrend Trend
 if "BULLISH" in direction:
