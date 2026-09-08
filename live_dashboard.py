@@ -1017,3 +1017,1111 @@ else:
 st.write(
     f"Signal Candle: **{previous_entry_time}**"
                                           )
+# ============================================================
+# PART 3/4
+# REMOTE CONTROL + TARGETS + REAL LIMIT ORDER CONTROL
+# ============================================================
+
+st.divider()
+
+st.header("🎛️ REMOTE CONTROL")
+
+
+# ============================================================
+# SESSION STATE
+# ============================================================
+
+if "remote_enabled" not in st.session_state:
+    st.session_state["remote_enabled"] = False
+
+if "last_order_signal" not in st.session_state:
+    st.session_state["last_order_signal"] = ""
+
+if "pending_order_id" not in st.session_state:
+    st.session_state["pending_order_id"] = None
+
+if "pending_order_side" not in st.session_state:
+    st.session_state["pending_order_side"] = ""
+
+if "pending_order_time" not in st.session_state:
+    st.session_state["pending_order_time"] = 0
+
+
+# ============================================================
+# REMOTE ON / OFF
+# ============================================================
+
+remote_enabled = st.toggle(
+    "REAL TRADING REMOTE CONTROL",
+    value=st.session_state["remote_enabled"]
+)
+
+st.session_state["remote_enabled"] = remote_enabled
+
+
+if remote_enabled:
+    st.error("🔴 REAL ORDER CONTROL: ON")
+else:
+    st.success("🟢 REAL ORDER CONTROL: OFF")
+
+
+# ============================================================
+# ORDER SETTINGS
+# ============================================================
+
+r1, r2 = st.columns(2)
+
+
+with r1:
+
+    buy_offset = st.number_input(
+        "BUY LIMIT OFFSET",
+        value=DEFAULT_BUY_OFFSET,
+        step=10,
+        help="Example: -50 means signal price se 50 points neeche."
+    )
+
+
+with r2:
+
+    sell_offset = st.number_input(
+        "SELL LIMIT OFFSET",
+        value=DEFAULT_SELL_OFFSET,
+        step=10,
+        help="Example: +50 means signal price se 50 points upar."
+    )
+
+
+r3, r4 = st.columns(2)
+
+
+with r3:
+
+    order_size = st.number_input(
+        "ORDER SIZE",
+        min_value=1,
+        value=DEFAULT_ORDER_SIZE,
+        step=1
+    )
+
+
+with r4:
+
+    limit_timeout = st.number_input(
+        "LIMIT TIMEOUT (SECONDS)",
+        min_value=0,
+        value=DEFAULT_LIMIT_TIMEOUT,
+        step=5,
+        help="0 = MARKET conversion disabled."
+    )
+
+
+# ============================================================
+# TARGET SETTINGS
+# ============================================================
+
+st.subheader("🎯 TARGET SETTINGS")
+
+
+t1_points = st.number_input(
+    "TARGET 1 POINTS",
+    min_value=1,
+    value=TARGET_1,
+    step=50
+)
+
+
+t2_points = st.number_input(
+    "TARGET 2 POINTS",
+    min_value=1,
+    value=TARGET_2,
+    step=50
+)
+
+
+t3_points = st.number_input(
+    "TARGET 3 POINTS",
+    min_value=1,
+    value=TARGET_3,
+    step=50
+)
+
+
+# ============================================================
+# ENTRY PRICE WITH REMOTE OFFSET
+# ============================================================
+
+if signal_direction == "BUY":
+
+    limit_entry_price = (
+        signal_entry_price
+        + float(buy_offset)
+    )
+
+elif signal_direction == "SELL":
+
+    limit_entry_price = (
+        signal_entry_price
+        + float(sell_offset)
+    )
+
+else:
+
+    limit_entry_price = (
+        signal_entry_price
+    )
+
+
+# ============================================================
+# TARGET CALCULATION
+# ============================================================
+
+if signal_direction == "BUY":
+
+    target1 = (
+        limit_entry_price
+        + t1_points
+    )
+
+    target2 = (
+        limit_entry_price
+        + t2_points
+    )
+
+    target3 = (
+        limit_entry_price
+        + t3_points
+    )
+
+elif signal_direction == "SELL":
+
+    target1 = (
+        limit_entry_price
+        - t1_points
+    )
+
+    target2 = (
+        limit_entry_price
+        - t2_points
+    )
+
+    target3 = (
+        limit_entry_price
+        - t3_points
+    )
+
+else:
+
+    target1 = limit_entry_price + t1_points
+    target2 = limit_entry_price + t2_points
+    target3 = limit_entry_price + t3_points
+
+
+# ============================================================
+# DISPLAY ENTRY + TARGETS
+# ============================================================
+
+st.subheader("📌 ORDER ENTRY + TARGETS")
+
+
+ec1, ec2, ec3, ec4 = st.columns(4)
+
+
+with ec1:
+
+    st.metric(
+        "LIMIT ENTRY",
+        show_price(limit_entry_price)
+    )
+
+
+with ec2:
+
+    st.metric(
+        "TARGET 1",
+        show_price(target1)
+    )
+
+
+with ec3:
+
+    st.metric(
+        "TARGET 2",
+        show_price(target2)
+    )
+
+
+with ec4:
+
+    st.metric(
+        "TARGET 3",
+        show_price(target3)
+    )
+
+
+# ============================================================
+# DIRECTION CHANGE
+# ============================================================
+
+st.subheader(
+    "🔄 PENDING ORDER AUTO-CANCEL"
+)
+
+st.info(
+    "SuperTrend direction change hote hi "
+    "opposite pending LIMIT order automatically cancel hoga."
+)
+
+
+# ============================================================
+# GET OPEN ORDERS
+# ============================================================
+
+open_orders_response = api.open_orders()
+
+open_orders = get_result(
+    open_orders_response
+)
+
+if not isinstance(open_orders, list):
+    open_orders = []
+
+
+# ============================================================
+# FIND OUR PENDING ORDER
+# ============================================================
+
+pending_orders = []
+
+for order in open_orders:
+
+    try:
+
+        order_product_id = int(
+            order.get(
+                "product_id",
+                PRODUCT_ID
+            )
+        )
+
+    except Exception:
+
+        order_product_id = PRODUCT_ID
+
+
+    if order_product_id != PRODUCT_ID:
+        continue
+
+
+    order_type = str(
+        order.get(
+            "order_type",
+            order.get("type", "")
+        )
+    ).lower()
+
+
+    state = str(
+        order.get(
+            "state",
+            ""
+        )
+    ).lower()
+
+
+    if (
+        "limit" in order_type
+        and state not in [
+            "cancelled",
+            "filled",
+            "rejected"
+        ]
+    ):
+
+        pending_orders.append(order)
+
+
+# ============================================================
+# CANCEL PENDING ORDER ON DIRECTION CHANGE
+# ============================================================
+
+if pending_orders:
+
+    for order in pending_orders:
+
+        order_id = order.get("id")
+
+        order_side = str(
+            order.get(
+                "side",
+                ""
+            )
+        ).lower()
+
+
+        should_cancel = False
+
+
+        # ----------------------------------------------------
+        # BUY PENDING + CURRENT SELL
+        # ----------------------------------------------------
+
+        if (
+            order_side == "buy"
+            and current_trend == 1
+        ):
+
+            should_cancel = True
+
+
+        # ----------------------------------------------------
+        # SELL PENDING + CURRENT BUY
+        # ----------------------------------------------------
+
+        elif (
+            order_side == "sell"
+            and current_trend == -1
+        ):
+
+            should_cancel = True
+
+
+        # ----------------------------------------------------
+        # CANCEL
+        # ----------------------------------------------------
+
+        if (
+            should_cancel
+            and remote_enabled
+            and order_id is not None
+        ):
+
+            cancel_result = api.cancel_order(
+                order_id
+            )
+
+
+            if cancel_result.get("success"):
+
+                st.warning(
+                    f"🔄 Pending {order_side.upper()} "
+                    f"order CANCELLED — "
+                    f"SuperTrend direction changed."
+                )
+
+                st.session_state[
+                    "pending_order_id"
+                ] = None
+
+
+            else:
+
+                st.error(
+                    "Pending order cancel failed: "
+                    + str(
+                        cancel_result.get(
+                            "error",
+                            "Unknown error"
+                        )
+                    )
+                )
+
+
+# ============================================================
+# SHOW PENDING ORDERS
+# ============================================================
+
+if pending_orders:
+
+    pending_rows = []
+
+    for order in pending_orders:
+
+        pending_rows.append({
+
+            "Order ID":
+                order.get("id", "-"),
+
+            "Side":
+                str(
+                    order.get(
+                        "side",
+                        ""
+                    )
+                ).upper(),
+
+            "Price":
+                show_price(
+                    order.get(
+                        "limit_price"
+                    )
+                ),
+
+            "Size":
+                order.get(
+                    "size",
+                    "-"
+                ),
+
+            "Status":
+                order.get(
+                    "state",
+                    "-"
+                )
+        })
+
+
+    st.dataframe(
+        pd.DataFrame(
+            pending_rows
+        ),
+        use_container_width=True,
+        hide_index=True
+    )
+
+else:
+
+    st.info(
+        "No pending LIMIT order."
+    )
+
+
+# ============================================================
+# PLACE NEW REAL LIMIT ORDER
+# ============================================================
+
+st.subheader(
+    "🚀 REAL LIMIT ORDER"
+)
+
+
+if not remote_enabled:
+
+    st.warning(
+        "Remote Control OFF — "
+        "real order place nahi hoga."
+    )
+
+else:
+
+    if not API_KEY or not API_SECRET:
+
+        st.error(
+            "API Key / API Secret missing."
+        )
+
+    elif signal_direction not in [
+        "BUY",
+        "SELL"
+    ]:
+
+        st.info(
+            "Naya confirmed BUY/SELL signal ka wait hai."
+        )
+
+    else:
+
+        current_signal_time = (
+            signal_time
+        )
+
+
+        # ----------------------------------------------------
+        # PREVENT DUPLICATE ORDER
+        # ----------------------------------------------------
+
+        already_processed = (
+            st.session_state[
+                "last_order_signal"
+            ]
+            == current_signal_time
+        )
+
+
+        if already_processed:
+
+            st.success(
+                f"Signal already processed: "
+                f"{signal_direction}"
+            )
+
+        else:
+
+            order_side = (
+                "buy"
+                if signal_direction == "BUY"
+                else "sell"
+            )
+
+
+            st.write(
+                f"Signal: **{signal_direction}**"
+            )
+
+            st.write(
+                f"LIMIT PRICE: "
+                f"**{show_price(limit_entry_price)}**"
+            )
+
+            st.write(
+                f"SIZE: **{order_size}**"
+            )
+
+
+            if st.button(
+                "PLACE REAL LIMIT ORDER",
+                type="primary"
+            ):
+
+                result = api.place_limit_order(
+                    side=order_side,
+                    size=int(order_size),
+                    limit_price=limit_entry_price
+                )
+
+
+                if result.get("success"):
+
+                    result_data = result.get(
+                        "result",
+                        {}
+                    )
+
+
+                    new_order_id = (
+                        result_data.get("id")
+                        if isinstance(
+                            result_data,
+                            dict
+                        )
+                        else None
+                    )
+
+
+                    st.session_state[
+                        "pending_order_id"
+                    ] = new_order_id
+
+
+                    st.session_state[
+                        "pending_order_side"
+                    ] = order_side
+
+
+                    st.session_state[
+                        "pending_order_time"
+                    ] = time.time()
+
+
+                    st.session_state[
+                        "last_order_signal"
+                    ] = current_signal_time
+
+
+                    st.success(
+                        f"✅ REAL {signal_direction} "
+                        f"LIMIT ORDER SENT"
+                    )
+
+
+                    st.write(
+                        f"Order ID: "
+                        f"**{new_order_id}**"
+                    )
+
+
+                else:
+
+                    st.error(
+                        "❌ REAL ORDER FAILED: "
+                        + str(
+                            result.get(
+                                "error",
+                                "Unknown error"
+                            )
+                        )
+                    )
+
+
+# ============================================================
+# CURRENT SIGNAL INFORMATION
+# ============================================================
+
+st.divider()
+
+st.subheader(
+    "📡 SIGNAL INFORMATION"
+)
+
+s1, s2, s3 = st.columns(3)
+
+
+with s1:
+
+    st.write(
+        f"Direction: **{current_direction}**"
+    )
+
+
+with s2:
+
+    st.write(
+        f"Signal Entry: "
+        f"**{show_price(signal_entry_price)}**"
+    )
+
+
+with s3:
+
+    st.write(
+        f"Signal Time: **{signal_time}**"
+)
+    # ============================================================
+# PART 4/4
+# REAL POSITION + ORDER STATUS + TARGET STATUS + REFRESH
+# ============================================================
+
+st.divider()
+
+st.header("📍 REAL POSITION")
+
+
+# ============================================================
+# GET REAL POSITION
+# ============================================================
+
+position_response = api.position()
+
+position_data = get_result(position_response)
+
+if isinstance(position_data, list):
+
+    if position_data:
+        position = position_data[0]
+    else:
+        position = {}
+
+elif isinstance(position_data, dict):
+
+    position = position_data
+
+else:
+
+    position = {}
+
+
+position_size = number(
+    position.get("size"),
+    0
+)
+
+position_entry = number(
+    position.get("entry_price")
+)
+
+position_pnl = number(
+    position.get("unrealized_pnl"),
+    0
+)
+
+
+# ============================================================
+# POSITION SIDE
+# ============================================================
+
+if position_size > 0:
+
+    position_side = "LONG 🟢"
+
+elif position_size < 0:
+
+    position_side = "SHORT 🔴"
+
+else:
+
+    position_side = "FLAT ⚪"
+
+
+p1, p2, p3, p4 = st.columns(4)
+
+
+with p1:
+
+    st.metric(
+        "POSITION",
+        position_side
+    )
+
+
+with p2:
+
+    st.metric(
+        "SIZE",
+        str(abs(position_size))
+    )
+
+
+with p3:
+
+    st.metric(
+        "ENTRY PRICE",
+        show_price(position_entry)
+    )
+
+
+with p4:
+
+    st.metric(
+        "UNREALIZED P&L",
+        f"₹{position_pnl:,.2f}"
+    )
+
+
+# ============================================================
+# ORDER STATUS
+# ============================================================
+
+st.header("📋 REAL ORDER STATUS")
+
+
+orders_response = api.open_orders()
+
+orders_result = get_result(
+    orders_response
+)
+
+
+if isinstance(orders_result, list):
+
+    open_orders = orders_result
+
+else:
+
+    open_orders = []
+
+
+if open_orders:
+
+    order_rows = []
+
+
+    for order in open_orders:
+
+        order_rows.append({
+
+            "Order ID":
+                order.get(
+                    "id",
+                    "-"
+                ),
+
+            "Side":
+                str(
+                    order.get(
+                        "side",
+                        ""
+                    )
+                ).upper(),
+
+            "Type":
+                order.get(
+                    "order_type",
+                    order.get(
+                        "type",
+                        "-"
+                    )
+                ),
+
+            "Price":
+                show_price(
+                    order.get(
+                        "limit_price"
+                    )
+                ),
+
+            "Size":
+                order.get(
+                    "size",
+                    "-"
+                ),
+
+            "State":
+                order.get(
+                    "state",
+                    "-"
+                )
+        })
+
+
+    st.dataframe(
+        pd.DataFrame(
+            order_rows
+        ),
+        use_container_width=True,
+        hide_index=True
+    )
+
+else:
+
+    st.info(
+        "No open orders."
+    )
+
+
+# ============================================================
+# TARGET STATUS
+# ============================================================
+
+st.header("🎯 TARGET STATUS")
+
+
+if signal_direction == "BUY":
+
+    target_direction = "LONG"
+
+elif signal_direction == "SELL":
+
+    target_direction = "SHORT"
+
+else:
+
+    target_direction = "NONE"
+
+
+tc1, tc2, tc3, tc4 = st.columns(4)
+
+
+with tc1:
+
+    st.metric(
+        "DIRECTION",
+        target_direction
+    )
+
+
+with tc2:
+
+    st.metric(
+        "TARGET 1",
+        show_price(target1)
+    )
+
+
+with tc3:
+
+    st.metric(
+        "TARGET 2",
+        show_price(target2)
+    )
+
+
+with tc4:
+
+    st.metric(
+        "TARGET 3",
+        show_price(target3)
+    )
+
+
+# ============================================================
+# TARGET DISTANCE
+# ============================================================
+
+if signal_direction in ["BUY", "SELL"]:
+
+    st.write(
+        f"Entry: **{show_price(limit_entry_price)}**"
+    )
+
+    st.write(
+        f"T1: **{show_price(target1)}**"
+    )
+
+    st.write(
+        f"T2: **{show_price(target2)}**"
+    )
+
+    st.write(
+        f"T3: **{show_price(target3)}**"
+    )
+
+
+# ============================================================
+# LIVE MARKET PRICE
+# ============================================================
+
+st.header("💰 LIVE MARKET PRICE")
+
+
+ticker_response = api.ticker()
+
+ticker_result = get_result(
+    ticker_response
+)
+
+
+if isinstance(ticker_result, dict):
+
+    live_price = None
+
+
+    for key in [
+        "close",
+        "last_price",
+        "mark_price",
+        "spot_price"
+    ]:
+
+        value = number(
+            ticker_result.get(key)
+        )
+
+
+        if value is not None:
+
+            live_price = value
+
+            break
+
+
+else:
+
+    live_price = None
+
+
+st.metric(
+    "BTCUSD",
+    show_price(live_price)
+)
+
+
+# ============================================================
+# SIGNAL / ORDER SUMMARY
+# ============================================================
+
+st.header("📊 TRADING SUMMARY")
+
+
+summary_rows = [
+
+    {
+        "Item": "SuperTrend Direction",
+        "Value": current_direction
+    },
+
+    {
+        "Item": "Signal Entry",
+        "Value": show_price(
+            signal_entry_price
+        )
+    },
+
+    {
+        "Item": "Limit Entry",
+        "Value": show_price(
+            limit_entry_price
+        )
+    },
+
+    {
+        "Item": "Target 1",
+        "Value": show_price(
+            target1
+        )
+    },
+
+    {
+        "Item": "Target 2",
+        "Value": show_price(
+            target2
+        )
+    },
+
+    {
+        "Item": "Target 3",
+        "Value": show_price(
+            target3
+        )
+    },
+
+    {
+        "Item": "Signal Time",
+        "Value": signal_time
+    },
+
+    {
+        "Item": "Remote Trading",
+        "Value": (
+            "ON 🔴"
+            if remote_enabled
+            else "OFF 🟢"
+        )
+    }
+]
+
+
+st.dataframe(
+    pd.DataFrame(
+        summary_rows
+    ),
+    use_container_width=True,
+    hide_index=True
+)
+
+
+# ============================================================
+# SAFETY INFORMATION
+# ============================================================
+
+st.divider()
+
+st.subheader(
+    "⚠️ REAL TRADING SAFETY"
+)
+
+if remote_enabled:
+
+    st.error(
+        "REAL TRADING ACTIVE — "
+        "Dashboard se exchange orders bheje ja sakte hain."
+    )
+
+else:
+
+    st.success(
+        "REAL TRADING OFF — "
+        "Dashboard order place nahi karega."
+    )
+
+
+st.write(
+    "Pending LIMIT order ka direction "
+    "SuperTrend se opposite hone par "
+    "automatic cancellation Part 3 mein enabled hai."
+)
+
+
+# ============================================================
+# INDIAN TIME
+# ============================================================
+
+now_ist = datetime.now(
+    timezone.utc
+).astimezone(IST)
+
+
+st.write(
+    "Dashboard Time: "
+    f"**{now_ist.strftime('%Y-%m-%d %H:%M:%S IST')}**"
+)
+
+
+# ============================================================
+# AUTO REFRESH
+# ============================================================
+
+time.sleep(
+    REFRESH_SECONDS
+)
+
+st.rerun()
