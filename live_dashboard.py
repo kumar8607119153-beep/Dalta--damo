@@ -402,7 +402,8 @@ with c3:
 # ============================================================
 
 if "locked_entry" not in st.session_state or direction != st.session_state.get("last_direction"):
-    st.session_state["locked_entry"] = float(last["SuperTrend"])
+    signal_candle = df.iloc[-2]
+    st.session_state["locked_entry"] = float(signal_candle["close"])
     base_price = st.session_state["locked_entry"]
     
     
