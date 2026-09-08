@@ -124,3 +124,10 @@ st.markdown("---")
 
 st.subheader("📊 Live Execution & Trade Book")
 st.info("No active open orders or history found in the current session. (0 records)")
+# Check if trades exist in bot_state, otherwise show 0 records info
+trades_list = bot_state.get('trades', [])
+if trades_list:
+    trade_df = pd.DataFrame(trades_list)
+    st.dataframe(trade_df, use_container_width=True)
+else:
+    st.info("No active open orders or history found in the current session. (0 records)")
