@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 import requests
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 # ============================================================
@@ -3464,6 +3465,49 @@ st.divider()
 st.caption(
     "Dashboard Time: "
     + indian_time()
+)
+# ============================================================
+# ORIGINAL TRADINGVIEW CHART — VIEW ONLY
+# ============================================================
+
+components.html(
+    """
+    <div
+        class="tradingview-widget-container"
+        style="height:100vh;width:100%;">
+
+        <div
+            class="tradingview-widget-container__widget"
+            style="height:100%;width:100%;">
+        </div>
+
+        <script
+            type="text/javascript"
+            src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"
+            async>
+
+        {
+            "autosize": true,
+            "symbol": "BINANCE:BTCUSDT",
+            "interval": "5",
+            "timezone": "Asia/Kolkata",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "enable_publishing": false,
+            "allow_symbol_change": true,
+            "hide_top_toolbar": false,
+            "hide_legend": false,
+            "save_image": false,
+            "hide_volume": false,
+            "support_host": "https://www.tradingview.com"
+        }
+
+        </script>
+    </div>
+    """,
+    height=850,
+    scrolling=False
 )
 
 # ============================================================
