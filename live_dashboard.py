@@ -413,21 +413,20 @@ class DeltaAPI:
 
 
 # ============================================================
-# API CREDENTIALS
+# API CREDENTIALS (OWNER & MEMBERS FROM GITHUB SECRETS)
 # ============================================================
 
-API_KEY = os.getenv(
-    "DELTA_API_KEY",
-    ""
-)
+OWNER_KEY = os.getenv("OWNER_API_KEY", "")
+OWNER_SECRET = os.getenv("OWNER_API_SECRET", "")
 
-API_SECRET = os.getenv(
-    "DELTA_API_SECRET",
-    ""
-)
+MEMBER1_KEY = os.getenv("MEMBER1_API_KEY", "")
+MEMBER1_SECRET = os.getenv("MEMBER1_API_SECRET", "")
 
+API_KEY = OWNER_KEY
+API_SECRET = OWNER_SECRET
 
 api = DeltaAPI()
+
 
 
 # ============================================================
