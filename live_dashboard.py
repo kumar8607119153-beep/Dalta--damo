@@ -464,49 +464,36 @@ except Exception:
     OWNER_API_SECRET = os.getenv("OWNER_API_SECRET", "")
     
 
-if st.button(
-    "🔗 TEST OWNER API",
-    key="test_owner_api_button"
-):
-    if not OWNER_API_KEY or not OWNER_API_SECRET:
-        st.error("❌ OWNER_API_KEY / OWNER_API_SECRET GitHub Secrets नहीं मिले।")
-        st.session_state["owner_api_connected"] = False
-    else:
-        try:
-            owner_client = DeltaAPI(OWNER_API_KEY, OWNER_API_SECRET)
-            owner_result = owner_client.position()
-            if owner_result.get("success"):
-                st.success("🟢 OWNER API CONNECTED")
-                st.session_state["owner_api_connected"] = True
-                st.session_state["owner_api_key"] = OWNER_API_KEY
-                st.session_state["owner_api_secret"] = OWNER_API_SECRET
-            else:
-                st.error("🔴 OWNER API CONNECTION FAILED")
-                st.session_state["owner_api_connected"] = False
-                st.write(owner_result.get("error"))
-        except Exception as e:
-            st.session_state["owner_api_connected"] = False
-            st.error(f"❌ Owner API Error: {e}")
-
-
 # ============================================================
-# OWNER STATUS
+# OWNER STATUS (AUTOMATIC HEALTH CHECK)
 # ============================================================
 
-if st.session_state.get(
-    "owner_api_connected",
-    False
-):
-
-    st.success(
-        "👑 Owner Status: CONNECTED"
-    )
-
+if not OWNER_API_KEY or not OWNER_API_SECRET:
+    st.error("❌ OWNER_API_KEY / OWNER_API_SECRET GitHub Secrets में नहीं मिले।")
+    st.session_state["owner_api_connected"] = False
 else:
+    try:
+        owner_client = DeltaAPI(OWNER_API_KEY, OWNER_API_SECRET)
+        owner_result = owner_client.position()
+        
+        if owner_result.get("success"):
+            st.success("👑 Owner Status: CONNECTED & LIVE 🟢")
+            st.session_state["owner_api_connected"] = True
+            st.session_state["owner_api_key"] = OWNER_API_KEY
+            st.session_state["owner_api_secret"] = OWNER_API_SECRET
+        else:
+            st.session_state["owner_api_connected"] = False
+            err_text = str(owner_result.get("error", ""))
+            
+            if "ip" in err_text.lower() or "whitelist" in err_text.lower():
+                st.error(f"🌐 IP WHITELIST ERROR: Streamlit Cloud का IP Delta Exchange पर जोड़ा नहीं है! | Details: {err_text}")
+            else:
+                st.error(f"🔴 Owner Status: NOT CONNECTED | Reason: {err_text}")
+                
+    except Exception as e:
+        st.session_state["owner_api_connected"] = False
+        st.error(f"❌ Owner API Connection Error: {e}")
 
-    st.warning(
-        "👑 Owner Status: NOT CONNECTED"
-    )
 
 
 # ============================================================
