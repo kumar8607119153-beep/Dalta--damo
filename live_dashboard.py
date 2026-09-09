@@ -497,319 +497,109 @@ else:
 
 
 # ============================================================
-# MEMBER SYSTEM
+# FIXED 5 MEMBERS PRE-CONFIGURED (AUTOMATIC HEALTH CHECK)
 # ============================================================
 
 st.divider()
+st.header("👥 MEMBER API CONTROL (5 MEMBERS)")
 
-st.header(
-    "👥 MEMBER API CONTROL"
-)
+# 5 फिक्स मेंबर्स सीधे GitHub Secrets से लोड होंगे
+st.session_state["members"] = [
+    {
+        "name": "Member 1",
+        "api_key": st.secrets.get("MEMBER1_API_KEY", os.getenv("MEMBER1_API_KEY", "")),
+        "api_secret": st.secrets.get("MEMBER1_API_SECRET", os.getenv("MEMBER1_API_SECRET", "")),
+        "connected": False,
+        "active": True
+    },
+    {
+        "name": "Member 2",
+        "api_key": st.secrets.get("MEMBER2_API_KEY", os.getenv("MEMBER2_API_KEY", "")),
+        "api_secret": st.secrets.get("MEMBER2_API_SECRET", os.getenv("MEMBER2_API_SECRET", "")),
+        "connected": False,
+        "active": True
+    },
+    {
+        "name": "Member 3",
+        "api_key": st.secrets.get("MEMBER3_API_KEY", os.getenv("MEMBER3_API_KEY", "")),
+        "api_secret": st.secrets.get("MEMBER3_API_SECRET", os.getenv("MEMBER3_API_SECRET", "")),
+        "connected": False,
+        "active": True
+    },
+    {
+        "name": "Member 4",
+        "api_key": st.secrets.get("MEMBER4_API_KEY", os.getenv("MEMBER4_API_KEY", "")),
+        "api_secret": st.secrets.get("MEMBER4_API_SECRET", os.getenv("MEMBER4_API_SECRET", "")),
+        "connected": False,
+        "active": True
+    },
+    {
+        "name": "Member 5",
+        "api_key": st.secrets.get("MEMBER5_API_KEY", os.getenv("MEMBER5_API_KEY", "")),
+        "api_secret": st.secrets.get("MEMBER5_API_SECRET", os.getenv("MEMBER5_API_SECRET", "")),
+        "connected": False,
+        "active": True
+    }
+]
 
-st.caption(
-    "जितने चाहें Members जोड़ सकते हैं। "
-    "हर Member की अलग API होगी।"
-)
+st.info("👥 Total Pre-configured Members: 5 (Automatic Live Sync Enabled)")
 
-
-# ============================================================
-# MEMBER STORAGE
-# ============================================================
-
-if "members" not in st.session_state:
-
-    st.session_state["members"] = []
-
-
-# ============================================================
-# ADD MEMBER
-# ============================================================
-
-if st.button(
-    "➕ ADD MEMBER",
-    key="add_member_button"
-):
-
-    member_number = (
-        len(
-            st.session_state["members"]
-        ) + 1
-    )
-
-    st.session_state[
-        "members"
-    ].append({
-
-        "name":
-            f"Member {member_number}",
-
-        "api_key":
-            "",
-
-        "api_secret":
-            "",
-
-        "connected":
-            False,
-
-        "active":
-            False
-    })
-
-
-# ============================================================
-# MEMBER COUNT
-# ============================================================
-
-st.info(
-    f"👥 Total Members: "
-    f"{len(st.session_state['members'])}"
-)
-
-
-# ============================================================
-# MEMBER CARDS
-# ============================================================
-
-for index, member in enumerate(
-    st.session_state["members"]
-):
-
+# पांचों मेंबर्स का ऑटोमैटिक हेल्थ चेक लूप (बिना किसी बटन के)
+for index, member in enumerate(st.session_state["members"]):
     st.markdown("---")
+    st.subheader(f"👤 {member['name']}")
 
-    st.subheader(
-        f"👤 {member['name']}"
-    )
-
-
-    # --------------------------------------------------------
-    # MEMBER NAME
-    # --------------------------------------------------------
-
-    member["name"] = st.text_input(
-
-        "Member Name",
-
-        value=member["name"],
-
-        key=f"member_name_{index}"
-    )
-
-
-        # --------------------------------------------------------
-    # MEMBER API CREDENTIALS FROM ENVIRONMENT / GITHUB SECRETS
-    # --------------------------------------------------------
-    member_no = index + 1
-    member["api_key"] = st.secrets.get(f"MEMBER{member_no}_API_KEY", os.getenv(f"MEMBER{member_no}_API_KEY", ""))
-    member["api_secret"] = st.secrets.get(f"MEMBER{member_no}_API_SECRET", os.getenv(f"MEMBER{member_no}_API_SECRET", ""))
-
-
-
-
-    # --------------------------------------------------------
-    # TEST MEMBER API
-    # --------------------------------------------------------
-
-    if st.button(
-
-        "🔗 TEST MEMBER API",
-
-        key=f"test_member_api_{index}"
-    ):
-
-        if not member["api_key"]:
-
-            member["connected"] = False
-
-            st.error(
-                "❌ Member API Key खाली है।"
-            )
-
-        elif not member["api_secret"]:
-
-            member["connected"] = False
-
-            st.error(
-                "❌ Member API Secret खाली है।"
-            )
-
-        else:
-
-            try:
-
-                member_client = DeltaAPI(
-
-                    member["api_key"],
-
-                    member["api_secret"]
-                )
-
-
-                result = member_client.position()
-
-
-                if result.get("success"):
-
-                    member["connected"] = True
-
-                    st.success(
-                        "🟢 MEMBER API CONNECTED"
-                    )
-
-                else:
-
-                    member["connected"] = False
-
-                    st.error(
-                        "🔴 MEMBER API CONNECTION FAILED"
-                    )
-
-                    st.write(
-                        result.get(
-                            "error"
-                        )
-                    )
-
-
-            except Exception as e:
-
+    if not member["api_key"] or not member["api_secret"]:
+        member["connected"] = False
+        st.error(f"❌ {member['name']}: GitHub Secrets में API Key या Secret गायब है (`MEMBER{index+1}_API_KEY`).")
+    else:
+        try:
+            member_client = DeltaAPI(member["api_key"], member["api_secret"])
+            member_result = member_client.position()
+            
+            if member_result.get("success"):
+                member["connected"] = True
+                st.success(f"🟢 {member['name']} — API CONNECTED & LIVE")
+            else:
                 member["connected"] = False
-
-                st.error(
-                    f"❌ Member API Error: {e}"
-                )
-
-
-    # --------------------------------------------------------
-    # MEMBER CONNECTION STATUS
-    # --------------------------------------------------------
+                err_text = str(member_result.get("error", ""))
+                
+                if "ip" in err_text.lower() or "whitelist" in err_text.lower():
+                    st.error(f"🌐 IP WHITELIST ERROR ({member['name']}): Streamlit IP Delta पर जोड़ी नहीं है! | {err_text}")
+                else:
+                    st.error(f"🔴 {member['name']} — NOT CONNECTED | Reason: {err_text}")
+                    
+        except Exception as e:
+        #   member["connected"] = False
+            st.error(f"❌ {member['name']} API Error: {e}")
 
     if member["connected"]:
-
-        st.success(
-            "🟢 API CONNECTED"
-        )
-
+        st.write(f"Status: **REAL TRADING ACTIVE (AUTO)** 🚀")
     else:
-
-        st.warning(
-            "🟡 API NOT CONNECTED"
-        )
-
-
-    # --------------------------------------------------------
-    # MEMBER ACTIVE CONTROL
-    # --------------------------------------------------------
-
-    member_active = st.toggle(
-
-        "🎛️ MEMBER ACTIVE / REAL TRADING",
-
-        value=member["active"],
-
-        key=f"member_active_{index}"
-    )
-
-
-    if member_active:
-
-        if member["connected"]:
-
-            member["active"] = True
-
-            st.error(
-                f"🔴 {member['name']} "
-                "REAL TRADING ACTIVE"
-            )
-
-        else:
-
-            member["active"] = False
-
-            st.warning(
-                "⚠️ पहले API CONNECT करें। "
-                "फिर Member Active करें।"
-            )
-
-    else:
-
-        member["active"] = False
-
-        st.success(
-            f"🟢 {member['name']} — TRADING OFF"
-        )
-
-
-    # --------------------------------------------------------
-    # REMOVE MEMBER
-    # --------------------------------------------------------
-
-    if st.button(
-
-        "🗑️ REMOVE MEMBER",
-
-        key=f"remove_member_{index}"
-    ):
-
-        st.session_state[
-            "members"
-        ].pop(index)
-
-        st.rerun()
+        st.write(f"Status: **TRADING PAUSED (Check Secrets / IP)** ⚠️")
 
 
 # ============================================================
-# ACTIVE MEMBER SUMMARY
+# ACTIVE MEMBER SUMMARY TABLE
 # ============================================================
 
 st.divider()
+st.subheader("📊 MEMBER SUMMARY")
 
-st.subheader(
-    "📊 MEMBER SUMMARY"
+summary = []
+for member in st.session_state["members"]:
+    summary.append({
+        "Member": member["name"],
+        "API": "CONNECTED" if member["connected"] else "NOT CONNECTED",
+        "Trading": "ACTIVE" if member["active"] else "OFF"
+    })
+
+st.dataframe(
+    pd.DataFrame(summary),
+    use_container_width=True,
+    hide_index=True
 )
 
-
-if st.session_state["members"]:
-
-    summary = []
-
-    for member in st.session_state["members"]:
-
-        summary.append({
-
-            "Member":
-                member["name"],
-
-            "API":
-                (
-                    "CONNECTED"
-                    if member["connected"]
-                    else "NOT CONNECTED"
-                ),
-
-            "Trading":
-                (
-                    "ACTIVE"
-                    if member["active"]
-                    else "OFF"
-                )
-        })
-
-
-    st.dataframe(
-
-        pd.DataFrame(summary),
-
-        use_container_width=True,
-
-        hide_index=True
-    )
-
-else:
-
-    st.info(
-        "अभी कोई Member नहीं जोड़ा गया है।"
-    )
 
 
 # ============================================================
