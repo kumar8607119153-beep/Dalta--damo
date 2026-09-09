@@ -1453,21 +1453,14 @@ if "pending_order_time" not in st.session_state:
 
 
 # ============================================================
-# REMOTE ON / OFF
+# REAL TRADING PERMANENTLY ON (ALWAYS ACTIVE)
 # ============================================================
 
-remote_enabled = st.toggle(
-    "REAL TRADING REMOTE CONTROL",
-    value=st.session_state["remote_enabled"]
-)
+remote_enabled = True
+st.session_state["remote_enabled"] = True
 
-st.session_state["remote_enabled"] = remote_enabled
+st.error("🔴 REAL TRADING REMOTE CONTROL: PERMANENTLY ON (AUTO)")
 
-
-if remote_enabled:
-    st.error("🔴 REAL ORDER CONTROL: ON")
-else:
-    st.success("🟢 REAL ORDER CONTROL: OFF")
 
 
 # ============================================================
