@@ -96,39 +96,101 @@ selected_tab = st.radio(
 # WATCHLIST — BTC / NIFTY / BANKNIFTY
 # Early Exit: बाकी trading engine इस tab में execute नहीं होगा.
 # ------------------------------------------------------------
+# ------------------------------------------------------------
+# WATCHLIST — TRADINGVIEW LIVE PRICE
+# ------------------------------------------------------------
 if selected_tab == "Watchlist":
+
     st.title("📋 WATCHLIST")
 
-    st.markdown("""
-    <style>
-    .watch-card {
-        border: 1px solid rgba(128,128,128,.30);
-        border-radius: 12px;
-        padding: 18px;
-        margin-bottom: 12px;
-        background: rgba(128,128,128,.08);
-    }
-    .watch-symbol {
-        font-size: 24px;
-        font-weight: 700;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    components.html(
+        """
+        <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
 
-    for symbol_name, symbol_desc in [
-        ("BTC", "Bitcoin"),
-        ("NIFTY", "NIFTY 50"),
-        ("BANKNIFTY", "NIFTY Bank"),
-    ]:
-        st.markdown(
-            f"""
-            <div class="watch-card">
-                <div class="watch-symbol">{symbol_name}</div>
-                <div>{symbol_desc}</div>
+        .tv-watchlist {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+
+        .tv-card {
+            border: 1px solid rgba(128,128,128,.35);
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 120px;
+        }
+        </style>
+
+        <div class="tv-watchlist">
+
+            <!-- BTC -->
+            <div class="tv-card">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script
+                        type="text/javascript"
+                        src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js"
+                        async>
+                    {
+                        "symbol": "BINANCE:BTCUSDT",
+                        "width": "100%",
+                        "colorTheme": "dark",
+                        "isTransparent": true,
+                        "locale": "en"
+                    }
+                    </script>
+                </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+
+            <!-- NIFTY -->
+            <div class="tv-card">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script
+                        type="text/javascript"
+                        src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js"
+                        async>
+                    {
+                        "symbol": "NSE:NIFTY",
+                        "width": "100%",
+                        "colorTheme": "dark",
+                        "isTransparent": true,
+                        "locale": "en"
+                    }
+                    </script>
+                </div>
+            </div>
+
+            <!-- BANKNIFTY -->
+            <div class="tv-card">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script
+                        type="text/javascript"
+                        src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js"
+                        async>
+                    {
+                        "symbol": "NSE:BANKNIFTY",
+                        "width": "100%",
+                        "colorTheme": "dark",
+                        "isTransparent": true,
+                        "locale": "en"
+                    }
+                    </script>
+                </div>
+            </div>
+
+        </div>
+        """,
+        height=180,
+        scrolling=False
+    )
 
     st.stop()
 
