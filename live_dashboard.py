@@ -617,13 +617,13 @@ for index, member in enumerate(
     )
 
 
-    # --------------------------------------------------------
+        # --------------------------------------------------------
     # MEMBER API CREDENTIALS FROM ENVIRONMENT / GITHUB SECRETS
     # --------------------------------------------------------
-        member_no = index + 1
-    # इसे भी इस तरह अपडेट कर लें ताकि दोनों तरफ से की उठ जाए:
+    member_no = index + 1
     member["api_key"] = st.secrets.get(f"MEMBER{member_no}_API_KEY", os.getenv(f"MEMBER{member_no}_API_KEY", ""))
     member["api_secret"] = st.secrets.get(f"MEMBER{member_no}_API_SECRET", os.getenv(f"MEMBER{member_no}_API_SECRET", ""))
+
 
 
 
