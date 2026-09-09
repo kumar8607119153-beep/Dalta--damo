@@ -1,4 +1,4 @@
-# ============================================================
+yes# ============================================================
 # SANJAY RANA - DELTA REAL TRADING DASHBOARD
 # PART 1/4
 # ============================================================
@@ -461,8 +461,16 @@ st.divider()
 st.header("👑 OWNER API")
 
 # Credentials are loaded automatically from environment / GitHub Secrets
-OWNER_API_KEY = st.secrets.get("OWNER_API_KEY", "")
-OWNER_API_SECRET = st.secrets.get("OWNER_API_SECRET", "")
+# ============================================================
+# OWNER API CREDENTIALS (SECURE FETCH)
+# ============================================================
+try:
+    OWNER_API_KEY = st.secrets.get("OWNER_API_KEY", os.getenv("OWNER_API_KEY", ""))
+    OWNER_API_SECRET = st.secrets.get("OWNER_API_SECRET", os.getenv("OWNER_API_SECRET", ""))
+except Exception:
+    OWNER_API_KEY = os.getenv("OWNER_API_KEY", "")
+    OWNER_API_SECRET = os.getenv("OWNER_API_SECRET", "")
+    
 
 if st.button(
     "🔗 TEST OWNER API",
@@ -612,9 +620,11 @@ for index, member in enumerate(
     # --------------------------------------------------------
     # MEMBER API CREDENTIALS FROM ENVIRONMENT / GITHUB SECRETS
     # --------------------------------------------------------
-    member_no = index + 1
-    member["api_key"] = os.getenv(f"MEMBER{member_no}_API_KEY", "")
-    member["api_secret"] = os.getenv(f"MEMBER{member_no}_API_SECRET", "")
+        member_no = index + 1
+    # इसे भी इस तरह अपडेट कर लें ताकि दोनों तरफ से की उठ जाए:
+    member["api_key"] = st.secrets.get(f"MEMBER{member_no}_API_KEY", os.getenv(f"MEMBER{member_no}_API_KEY", ""))
+    member["api_secret"] = st.secrets.get(f"MEMBER{member_no}_API_SECRET", os.getenv(f"MEMBER{member_no}_API_SECRET", ""))
+
 
 
     # --------------------------------------------------------
