@@ -14,7 +14,22 @@ import requests
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
+# Page Configuration & Watchlist State
+st.set_page_config(page_title="Delta Trading Dashboard", layout="wide")
 
+if "watchlist" not in st.session_state:
+    st.session_state.watchlist = ["NIFTY 50", "BANK NIFTY", "BTC/USDT", "ARK/USDT"]
+
+selected_tab = st.radio(
+    "Navigation", 
+    ["Main Dashboard", "Watchlist", "TradingView Chart"], 
+    horizontal=True,
+    label_visibility="collapsed"
+)
+st.markdown("---")
+
+def run_main_dashboard():
+                                  
 
 # ============================================================
 # SETTINGS
@@ -2333,3 +2348,41 @@ components.html(
 # ============================================================
 time.sleep(REFRESH_SECONDS)
 st.rerun()
+
+
+# Tabs ke hisab se page dikhane ka code (File ke sabse aakhri mein dalein)
+if selected_tab == "Main Dashboard":
+    run_main_dashboard()
+
+elif selected_tab == "Watchlist":
+    st.title("⭐ Market Watchlist")
+    new_symbol = st.text_input("Add New Symbol (e.g., ETH/USDT)")
+    if st.button("Add to Watchlist"):
+        if new_symbol and new_symbol.upper() not in st.session_state.watchlist:
+            st.session_state.watchlist.append(new_symbol.upper())
+            st.success(f"{new_symbol.upper()} successfully added!")
+            st.rerun()
+            
+    st.subheader("Current Watchlist Items:")
+    for item in st.session_state.watchlist:
+        st.markdown(f"- **{item}**")
+
+elif selected_tab == "TradingView Chart":
+    st.title("📈 TradingView Full Chart")
+    tradingview_html = """
+    <div class="tradingview-widget-container">
+      <div id="tradingview_chart" style="height:650px;"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget(
+      {
+        "width": "100%", "height": "650",
+        "symbol": "BINANCE:BTCUSDT", "interval": "D",
+        "timezone": "Etc/UTC", "theme": "dark", "style": "1",
+        "locale": "in", "container_id": "tradingview_chart"
+      });
+      </script>
+    </div>
+    """
+    st.components.v1.html(tradingview_html, height=670)
+        
