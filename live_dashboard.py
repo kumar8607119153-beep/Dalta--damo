@@ -15,6 +15,20 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Watchlist aur Navigation State
+if "watchlist" not in st.session_state:
+    st.session_state.watchlist = ["NIFTY 50", "BANK NIFTY", "BTC/USDT", "ARK/USDT"]
+
+selected_tab = st.radio(
+    "Navigation", 
+    ["Main Dashboard", "Watchlist", "TradingView Chart"], 
+    horizontal=True,
+    label_visibility="collapsed"
+)
+st.markdown("---")
+
+# Ab yahan se aapka Main Dashboard shuru hoga
+if selected_tab == "Main Dashboard":
 
 # ============================================================
 # SETTINGS
