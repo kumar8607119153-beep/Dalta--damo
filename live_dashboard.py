@@ -1973,80 +1973,79 @@ else:
             )
 
 
-            if st.button(
-                "PLACE REAL LIMIT ORDER",
-                type="primary"
-            ):
+            # ====================================================
+            # BINA BUTTON KE DIRECT AUTOMATIC ORDER EXECUTION
+            # ====================================================
 
-                result = api.place_limit_order(
-                    side=order_side,
-                    size=int(order_size),
-                    limit_price=limit_entry_price
+            result = api.place_limit_order(
+                side=order_side,
+                size=int(order_size),
+                limit_price=limit_entry_price
+            )
+
+
+            if result.get("success"):
+
+                result_data = result.get(
+                    "result",
+                    {}
                 )
 
 
-                if result.get("success"):
-
-                    result_data = result.get(
-                        "result",
-                        {}
+                new_order_id = (
+                    result_data.get("id")
+                    if isinstance(
+                        result_data,
+                        dict
                     )
+                    else None
+                )
 
 
-                    new_order_id = (
-                        result_data.get("id")
-                        if isinstance(
-                            result_data,
-                            dict
-                        )
-                        else None
-                    )
+                st.session_state[
+                    "pending_order_id"
+                ] = new_order_id
 
 
-                    st.session_state[
-                        "pending_order_id"
-                    ] = new_order_id
+                st.session_state[
+                    "pending_order_side"
+                ] = order_side
 
 
-                    st.session_state[
-                        "pending_order_side"
-                    ] = order_side
+                st.session_state[
+                    "pending_order_time"
+                ] = time.time()
 
 
-                    st.session_state[
-                        "pending_order_time"
-                    ] = time.time()
+                st.session_state[
+                    "last_order_signal"
+                ] = current_signal_time
 
 
-                    st.session_state[
-                        "last_order_signal"
-                    ] = current_signal_time
+                st.success(
+                    f"✅ REAL {signal_direction} "
+                    f"LIMIT ORDER SENT AUTOMATICALLY"
+                )
 
 
-                    st.success(
-                        f"✅ REAL {signal_direction} "
-                        f"LIMIT ORDER SENT"
-                    )
+                st.write(
+                    f"Order ID: "
+                    f"**{new_order_id}**"
+                )
 
 
-                    st.write(
-                        f"Order ID: "
-                        f"**{new_order_id}**"
-                    )
+            else:
 
-
-                else:
-
-                    st.error(
-                        "❌ REAL ORDER FAILED: "
-                        + str(
-                            result.get(
-                                "error",
-                                "Unknown error"
-                            )
+                st.error(
+                    "❌ REAL ORDER FAILED: "
+                    + str(
+                        result.get(
+                            "error",
+                            "Unknown error"
                         )
                     )
-
+        )
+                
 
 # ============================================================
 # CURRENT SIGNAL INFORMATION
