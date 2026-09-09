@@ -432,21 +432,13 @@ api = DeltaAPI()
 
 
 # ============================================================
-# BASIC STATUS
+# BASIC STATUS (PERMANENTLY LIVE)
 # ============================================================
 
-if REMOTE_TRADING:
-
-    st.warning(
-        "🔴 REAL TRADING MODE ENABLED"
-    )
-
-else:
-
-    st.info(
-        "🟡 SIGNAL / TEST MODE — "
-        "REAL ORDERS DISABLED"
+st.info(
+    "⚡ LIVE TRADING MODE: PERMANENTLY ACTIVE"
 )
+
     # ============================================================
 # OWNER API + MEMBER API CONTROL
 # PLACE THIS DIRECTLY BELOW PART 1
