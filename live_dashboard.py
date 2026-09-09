@@ -1433,11 +1433,11 @@ st.header("🎛️ REMOTE CONTROL")
 
 
 # ============================================================
-# SESSION STATE
+# REAL TRADING PERMANENTLY ON (ALWAYS ACTIVE)
 # ============================================================
 
 if "remote_enabled" not in st.session_state:
-    st.session_state["remote_enabled"] = False
+    st.session_state["remote_enabled"] = True
 
 if "last_order_signal" not in st.session_state:
     st.session_state["last_order_signal"] = ""
@@ -1451,15 +1451,12 @@ if "pending_order_side" not in st.session_state:
 if "pending_order_time" not in st.session_state:
     st.session_state["pending_order_time"] = 0
 
-
-# ============================================================
-# REAL TRADING PERMANENTLY ON (ALWAYS ACTIVE)
-# ============================================================
-
 remote_enabled = True
 st.session_state["remote_enabled"] = True
 
-st.error("🔴 REAL TRADING REMOTE CONTROL: PERMANENTLY ON (AUTO)")
+# प्रोफेशनल और मार्केट जैसा ब्लू स्टेटस बॉक्स
+st.info("⚡ LIVE TRADING ENGINE: ACTIVE & PERMANENTLY ON")
+
 
 
 
