@@ -142,7 +142,13 @@ def show_price(value):
 
 class DeltaAPI:
 
-    def __init__(self):
+    def __init__(self, api_key=None, api_secret=None):
+        global API_KEY, API_SECRET
+        
+        if api_key:
+            API_KEY = api_key
+        if api_secret:
+            API_SECRET = api_secret
 
         self.session = requests.Session()
 
@@ -150,6 +156,8 @@ class DeltaAPI:
             "User-Agent": "Sanjay-Rana-Real-Trading-Bot",
             "Accept": "application/json"
         })
+        
+
 
 
     # --------------------------------------------------------
