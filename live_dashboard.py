@@ -308,9 +308,10 @@ def calculate_supertrend(df_in):
 # DEMO ACCOUNT ENGINE & HISTORY RECONSTRUCTION (REPLACE HERE)
 # ============================================================
 
-def demo_rebuild_historical_history(df_demo):
-    b_offset = 0.5  # Apni strategy ke hisab se value set kar sakte hain
-    s_offset = 0.5
+def demo_rebuild_historical_history(df_demo, b_offset=DEFAULT_BUY_OFFSET, s_offset=DEFAULT_SELL_OFFSET):
+    b_offset = float(b_offset)
+    s_offset = float(s_offset)
+    
 
     history = []
     position = None
@@ -634,9 +635,12 @@ def run_demo_account():
     # historical Delta candles on the first load/restart. This means
     # old trades do not disappear when Streamlit session memory resets.
     if not st.session_state.demo_history:
-        historical_history = demo_rebuild_historical_history(df_demo)
-        st.session_state.demo_history = historical_history
-        st.session_state.demo_history_initialized = True
+    historical_history = demo_rebuild_historical_history(
+        df_demo, DEFAULT_BUY_OFFSET, DEFAULT_SELL_OFFSET
+    )
+    st.session_state.demo_history = historical_history
+    st.session_state.demo_history_initialized = True
+    
             
 
 
