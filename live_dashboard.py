@@ -466,14 +466,12 @@ def run_demo_account():
     # TradingView live quote widgets. These are view-only and do not place orders.
     st.subheader("📡 TRADINGVIEW LIVE MARKET")
     components.html("""
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;">
-      <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>{"symbol":"BINANCE:BTCUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}</script></div>
-      <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>{"symbol":"NSE:NIFTY","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}</script></div>
-      <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>{"symbol":"NSE:BANKNIFTY","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}</script></div>
+    <div style="display:flex;width:100%;">
+      <div class="tradingview-widget-container" style="width:100%;"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>{"symbol":"BINANCE:BTCUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}</script></div>
     </div>
     """, height=145, scrolling=False)
-
-    st.caption("Demo signal = confirmed 5-minute SuperTrend flip only. Same direction की हर candle पर नया order नहीं लिया जाएगा.")
+                                  
+                 
 
 
 # ------------------------------------------------------------
