@@ -311,6 +311,8 @@ def run_demo_account():
         st.session_state.demo_pending = None
     if "demo_history" not in st.session_state:
         st.session_state.demo_history = []
+        pd.DataFrame(st.session_state.demo_history).to_csv(CSV_FILE, index=False)
+
     if "demo_last_processed_bar" not in st.session_state:
         st.session_state.demo_last_processed_bar = 0
 
@@ -398,6 +400,7 @@ def run_demo_account():
             pos["t2_hit"] = True
             pos["qty"] -= qty
             st.session_state.demo_history.insert(0, {"Time": indian_time(last_bar_time), "Side": side, "Entry": round(entry,2), "Exit": round(t2,2), "Qty": qty, "Reason": "TP2", "P&L": round(pnl,2)})
+            pd.DataFrame(st.session_state.demo_history).to_csv(CSV_FILE, index=False)
 
         if pos["qty"] <= 0:
             st.session_state.demo_position = None
