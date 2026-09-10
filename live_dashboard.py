@@ -268,9 +268,7 @@ def demo_supertrend(df_in):
 
     return df
 
-
-
- def run_demo_account():
+def run_demo_account():
     demo_init_state()
     
     st.markdown("### 📜 LIVE SUPERTREND DEMO TRADING")
@@ -338,7 +336,7 @@ def demo_supertrend(df_in):
     else:
         st.markdown("⏳ Waiting for next Supertrend flip signal...")
 
-    # पुरानी ट्रेड्स की पूरी हिस्ट्री टेबल (यहाँ पर सारी पिछली ट्रेड्स दिखेंगी)
+    # पुरानी ट्रेड्स की पूरी हिस्ट्री टेबल
     st.markdown("---")
     st.markdown("### 📜 COMPLETE TRADE HISTORY")
     
@@ -363,6 +361,7 @@ def demo_supertrend(df_in):
             st.error(f"Total Realized PnL: ${total_pnl:,.2f}")
     else:
         st.info("No closed trades in history yet.")
+
    
 
 
