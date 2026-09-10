@@ -309,7 +309,9 @@ def calculate_supertrend(df_in):
 # ============================================================
 
 def demo_rebuild_historical_history(df_demo):
-    
+    b_offset = 0.5  # Apni strategy ke hisab se value set kar sakte hain
+    s_offset = 0.5
+
     history = []
     position = None
     pending = None
