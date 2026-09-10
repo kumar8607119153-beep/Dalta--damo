@@ -279,6 +279,27 @@ def demo_init_state():
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+            # ============================================================
+# DISPLAY HELPERS
+# ============================================================
+
+def number(value, default=None):
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except Exception:
+        return default
+
+
+def show_price(value):
+    value = number(value)
+
+    if value is None:
+        return "-"
+
+    return f"{value:,.2f}"
+    
 
 
 def demo_close_position(reason, price, candle_time):
@@ -584,29 +605,6 @@ def indian_time(timestamp):
 
     except Exception:
         return "-"
-
-
-# ============================================================
-# DISPLAY HELPERS
-# ============================================================
-
-def number(value, default=None):
-    try:
-        if value is None:
-            return default
-        return float(value)
-    except Exception:
-        return default
-
-
-def show_price(value):
-    value = number(value)
-
-    if value is None:
-        return "-"
-
-    return f"{value:,.2f}"
-
 
 # ============================================================
 # DELTA API
