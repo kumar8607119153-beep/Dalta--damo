@@ -224,7 +224,86 @@ def demo_make_dataframe(data):
         .reset_index(drop=True)
     )
 
+def calculate_supertrend(df_in):
+    df = df_in.copy()
+    prev_close = df["close"].shift(1)
+    tr1 = df["high"] - df["low"]
+    tr2 = (df["high"] - prev_close).abs()
+    tr3 = (df["low"] - prev_close).abs()
+    df["TR"] = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    df["ATR"] = float("nan")
 
+    first_atr = df["TR"].iloc[:ATR_PERIOD].mean()
+    df.loc[ATR_PERIOD - 1, "ATR"] = first_atr
+
+    for i in range(ATR_PERIOD, len(df)):
+        df.loc[i, "ATR"] = (
+            df.loc[i - 1, "ATR"] * (ATR_PERIOD - 1)
+            + df.loc[i, "TR"]
+        ) / ATR_PERIOD
+
+    df["HL2"] = (df["high"] + df["low"]) / 2.0
+    df["UP"] = float("nan")
+    df["DN"] = float("nan")
+    df["TREND"] = float("nan")
+    df["SUPERTREND"] = float("nan")
+    df["SIGNAL"] = ""
+
+    for i in range(len(df)):
+        atr = df.loc[i, "ATR"]
+        if pd.isna(atr):
+            continue
+        src = df.loc[i, "HL2"]
+        upper_basic = src + MULTIPLIER * atr
+        lower_basic = src - MULTIPLIER * atr
+
+        if i == ATR_PERIOD - 1:
+            df.loc[i, "UP"] = upper_basic
+            df.loc[i, "DN"] = lower_basic
+            df.loc[i, "TREND"] = 1
+            df.loc[i, "SUPERTREND"] = upper_basic
+            continue
+
+        previous_up = df.loc[i - 1, "UP"]
+        previous_dn = df.loc[i - 1, "DN"]
+        previous_trend = df.loc[i - 1, "TREND"]
+        previous_close = df.loc[i - 1, "close"]
+
+        if pd.isna(previous_up):
+            previous_up = upper_basic
+        if pd.isna(previous_dn):
+            previous_dn = lower_basic
+        if pd.isna(previous_trend):
+            previous_trend = 1
+
+        lower_band = (
+            lower_basic if lower_basic > previous_dn or previous_close < previous_dn
+            else previous_dn
+        )
+        upper_band = (
+            upper_basic if upper_basic < previous_up or previous_close > previous_up
+            else previous_up
+        )
+
+        close = df.loc[i, "close"]
+        trend = previous_trend
+        if previous_trend == 1:
+            trend = -1 if close > upper_band else 1
+        else:
+            trend = 1 if close < lower_band else -1
+
+        df.loc[i, "UP"] = upper_band
+        df.loc[i, "DN"] = lower_band
+        df.loc[i, "TREND"] = trend
+        df.loc[i, "SUPERTREND"] = lower_band if trend == -1 else upper_band
+
+        if trend == -1 and previous_trend == 1:
+            df.loc[i, "SIGNAL"] = "BUY"
+        elif trend == 1 and previous_trend == -1:
+            df.loc[i, "SIGNAL"] = "SELL"
+
+    return df
+                      
 # ============================================================
 # DEMO ACCOUNT ENGINE & HISTORY RECONSTRUCTION (REPLACE HERE)
 # ============================================================
