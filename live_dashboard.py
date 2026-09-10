@@ -269,40 +269,101 @@ def demo_supertrend(df_in):
     return df
 
 
-def demo_init_state():
-    defaults = {
-        "demo_balance": 100000.0,
-        "demo_realized_pnl": 0.0,
-        "demo_position": None,
-        "demo_pending": None,
-        "demo_history": [],
-        "demo_last_signal_time": None,
-        "demo_last_processed_bar": None,
-    }
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-            # ============================================================
-# DISPLAY HELPERS
-# ============================================================
 
-def number(value, default=None):
-    try:
-        if value is None:
-            return default
-        return float(value)
-    except Exception:
-        return default
-
-
-def show_price(value):
-    value = number(value)
-
-    if value is None:
-        return "-"
-
-    return f"{value:,.2f}"
+ def run_demo_account():
+    demo_init_state()
     
+    st.markdown("### 📜 LIVE SUPERTREND DEMO TRADING")
+    
+    # वही डेटा फेचिंग फंक्शन जो आपकी फाइल में रियल सिग्नल के लिए इस्तेमाल होता है
+    df = get_historical_data("BTCUSDT", interval="5", limit=100)
+    
+    if df is not None and not df.empty:
+        # आपकी फाइल वाला ओरिजिनल सुपरट्रेंड कैलकुलेशन
+        df = calculate_supertrend(df, atr_period=10, multiplier=3.0)
+        
+        current_price = float(df['close'].iloc[-1])
+        st.markdown(f"**Current BTC Price:** ${current_price:,.2f}")
+        
+        # कैंडल और ट्रेंड की स्थिति चेक करना
+        last_row = df.iloc[-1]
+        prev_row = df.iloc[-2]
+        
+        trend_direction = last_row.get('trend', 1)
+        prev_trend = prev_row.get('trend', 1)
+        
+        # सुपरट्रेंड फ्लिप कंडीशंस
+        is_bullish_flip = (prev_trend == -1 and trend_direction == 1)
+        is_bearish_flip = (prev_trend == 1 and trend_direction == -1)
+        
+        current_bar_time = str(last_row.name)
+        
+        # जैसे ही सुपरट्रेंड फ्लिप हो, डेमो ट्रेड ले ले
+        if (is_bullish_flip or is_bearish_flip) and st.session_state.get("demo_last_processed_bar") != current_bar_time:
+            st.session_state["demo_last_processed_bar"] = current_bar_time
+            
+            # अगर पुरानी पोजीशन खुली है तो उसे क्लोज करें और हिस्ट्री में डालें
+            if st.session_state["demo_position"]:
+                pos = st.session_state["demo_position"]
+                exit_price = current_price
+                pnl = (exit_price - pos['entry_price']) if pos['side'] == 'BUY' else (pos['entry_price'] - exit_price)
+                
+                st.session_state["demo_balance"] += pnl
+                st.session_state["demo_realized_pnl"] += pnl
+                
+                history_item = {
+                    "time": current_bar_time,
+                    "side": pos['side'],
+                    "entry": pos['entry_price'],
+                    "exit": exit_price,
+                    "pnl": pnl
+                }
+                st.session_state["demo_history"].insert(0, history_item)
+                st.session_state["demo_position"] = None
+                
+            # नई पोजीशन ओपन करें
+            new_side = "BUY" if is_bullish_flip else "SELL"
+            st.session_state["demo_position"] = {
+                "side": new_side,
+                "entry_price": current_price,
+                "time": current_bar_time
+            }
+            st.success(f"🚀 Supertrend Flip! New Trade Executed: {new_side} at ${current_price:,.2f}")
+
+    # एक्टिव ट्रेड स्टेटस
+    st.markdown("---")
+    if st.session_state["demo_position"]:
+        pos = st.session_state["demo_position"]
+        st.info(f"🟢 **Active Demo Trade:** Side: **{pos['side']}** | Entry: **${pos['entry_price']:,.2f}** | Time: {pos['time']}")
+    else:
+        st.markdown("⏳ Waiting for next Supertrend flip signal...")
+
+    # पुरानी ट्रेड्स की पूरी हिस्ट्री टेबल (यहाँ पर सारी पिछली ट्रेड्स दिखेंगी)
+    st.markdown("---")
+    st.markdown("### 📜 COMPLETE TRADE HISTORY")
+    
+    if st.session_state.get("demo_history"):
+        history_df = pd.DataFrame(st.session_state["demo_history"])
+        st.dataframe(
+            history_df,
+            column_config={
+                "time": "Trade Time",
+                "side": "Side",
+                "entry": st.column_config.NumberColumn("Entry Price", format="$%.2f"),
+                "exit": st.column_config.NumberColumn("Exit Price", format="$%.2f"),
+                "pnl": st.column_config.NumberColumn("Profit / Loss", format="$%.2f")
+            },
+            use_container_width=True
+        )
+        
+        total_pnl = st.session_state.get("demo_realized_pnl", 0.0)
+        if total_pnl >= 0:
+            st.success(f"Total Realized PnL: ${total_pnl:,.2f}")
+        else:
+            st.error(f"Total Realized PnL: ${total_pnl:,.2f}")
+    else:
+        st.info("No closed trades in history yet.")
+   
 
 
 def demo_close_position(reason, price, candle_time):
