@@ -92,45 +92,43 @@ selected_tab = st.radio(
     key="main_view_tab"
 )
 
-# ------------------------------------------------------------
-# WATCHLIST — BTC / NIFTY / BANKNIFTY
-# Early Exit: बाकी trading engine इस tab में execute नहीं होगा.
-# ------------------------------------------------------------
 if selected_tab == "Watchlist":
-    st.title("📋 WATCHLIST")
+    st.title("📋 WATCHLIST (LIVE TICK)")
 
     st.markdown("""
     <style>
     .watch-card {
         border: 1px solid rgba(128,128,128,.30);
         border-radius: 12px;
-        padding: 18px;
-        margin-bottom: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
         background: rgba(128,128,128,.08);
-    }
-    .watch-symbol {
-        font-size: 24px;
-        font-weight: 700;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    for symbol_name, symbol_desc in [
-        ("BTC", "Bitcoin"),
-        ("NIFTY", "NIFTY 50"),
-        ("BANKNIFTY", "NIFTY Bank"),
-    ]:
-        st.markdown(
-            f"""
-            <div class="watch-card">
-                <div class="watch-symbol">{symbol_name}</div>
-                <div>{symbol_desc}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    components.html("""
+    <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+      <div class="watch-card">
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+        {"symbol":"BINANCE:BTCUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
+        </script>
+      </div>
+      <div class="watch-card">
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+        {"symbol":"NSE:NIFTY","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
+        </script>
+      </div>
+      <div class="watch-card">
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+        {"symbol":"NSE:BANKNIFTY","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
+        </script>
+      </div>
+    </div>
+    """, height=350, scrolling=False)
 
     st.stop()
+
 
 # ============================================================
 # DEMO ACCOUNT — COMPLETELY SEPARATE SYSTEM
