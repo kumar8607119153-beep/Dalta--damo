@@ -304,39 +304,146 @@ def demo_supertrend(df_in):
             df.loc[i, "SIGNAL"] = "SELL"
 
     return df
-def demo_init_state():
-    if "demo_balance" not in st.session_state:
-        st.session_state.demo_balance = 10000.0
-    if "demo_realized_pnl" not in st.session_state:
-        st.session_state.demo_realized_pnl = 0.0
+def run_demo_account():
     if "demo_position" not in st.session_state:
         st.session_state.demo_position = None
     if "demo_pending" not in st.session_state:
         st.session_state.demo_pending = None
     if "demo_history" not in st.session_state:
         st.session_state.demo_history = []
-    if "demo_last_signal_time" not in st.session_state:
-        st.session_state.demo_last_signal_time = 0
     if "demo_last_processed_bar" not in st.session_state:
         st.session_state.demo_last_processed_bar = 0
-        
 
+    st.title("🟢 DEMO ACCOUNT (AUTO-TRADING)")
+    st.caption("Automatic SuperTrend Virtual Trading & History Tracker")
 
+    data = demo_get_candles()
+    df_demo = demo_make_dataframe(data)
 
-def run_demo_account():
-    demo_init_state()
+    current_start = (int(time.time()) // CANDLE_SECONDS) * CANDLE_SECONDS
+    if not df_demo.empty:
+        df_demo = df_demo[df_demo["time"] < current_start].reset_index(drop=True)
 
-    st.title("🟢 DEMO ACCOUNT")
-    st.caption("Independent virtual trading system — REAL Delta orders are disabled.")
+    if len(df_demo) < ATR_PERIOD + 5:
+        st.error("Demo SuperTrend ke liye enough candles nahi hain.")
+        return
 
-    if st.button("♻ RESET DEMO ACCOUNT", key="demo_reset"):
-        for key in [
-            "demo_balance", "demo_realized_pnl", "demo_position",
-            "demo_pending", "demo_history", "demo_last_signal_time",
-            "demo_last_processed_bar"
-        ]:
-            st.session_state.pop(key, None)
-        st.rerun()
+    df_demo = demo_supertrend(df_demo)
+    last = df_demo.iloc[-1]
+    last_bar_time = int(last["time"])
+    last_close = float(last["close"])
+    last_high = float(last["high"])
+    last_low = float(last["low"])
+    last_signal = str(last["SIGNAL"])
+    last_st = float(last["SUPERTREND"])
+
+    # --------------------------------------------------------
+    # AUTO ORDER GENERATION ON SIGNAL FLIP
+    # --------------------------------------------------------
+    if st.session_state.demo_last_processed_bar != last_bar_time:
+        st.session_state.demo_last_processed_bar = last_bar_time
+
+        if last_signal in ["BUY", "SELL"]:
+            if st.session_state.demo_pending:
+                if st.session_state.demo_pending["side"] != last_signal:
+                    st.session_state.demo_pending = None
+
+            if not st.session_state.demo_position and not st.session_state.demo_pending:
+                limit_price = last_close - 50 if last_signal == "BUY" else last_close + 50
+                st.session_state.demo_pending = {
+                    "side": last_signal,
+                    "price": limit_price,
+                    "signal_time": last_bar_time,
+                }
+
+    # --------------------------------------------------------
+    # FILL PENDING LIMIT ORDER
+    # --------------------------------------------------------
+    pending = st.session_state.demo_pending
+    if pending and pending["signal_time"] != last_bar_time:
+        fill_price = pending["price"]
+        if last_low <= fill_price <= last_high:
+            st.session_state.demo_position = {
+                "side": pending["side"],
+                "entry": fill_price,
+                "qty": 30,
+                "entry_time": last_bar_time,
+                "t1_hit": False,
+                "t2_hit": False,
+                "t3_hit": False,
+            }
+            st.session_state.demo_pending = None
+
+    # --------------------------------------------------------
+    # TARGET TRACKING & HISTORY RECORDING
+    # --------------------------------------------------------
+    pos = st.session_state.demo_position
+    if pos:
+        entry = pos["entry"]
+        side = pos["side"]
+        t1 = entry + TARGET_1 if side == "BUY" else entry - TARGET_1
+        t2 = entry + TARGET_2 if side == "BUY" else entry - TARGET_2
+        t3 = entry + TARGET_3 if side == "BUY" else entry - TARGET_3
+
+        if not pos["t1_hit"] and ((side == "BUY" and last_high >= t1) or (side == "SELL" and last_low <= t1)):
+            qty = 10
+            pnl = TARGET_1 * qty if side == "BUY" else -TARGET_1 * qty
+            pos["t1_hit"] = True
+            pos["qty"] -= qty
+            st.session_state.demo_history.insert(0, {"Time": indian_time(last_bar_time), "Side": side, "Entry": round(entry,2), "Exit": round(t1,2), "Qty": qty, "Reason": "TP1", "P&L": round(pnl,2)})
+
+        if not pos["t2_hit"] and ((side == "BUY" and last_high >= t2) or (side == "SELL" and last_low <= t2)):
+            qty = min(10, pos["qty"])
+            pnl = TARGET_2 * qty if side == "BUY" else -TARGET_2 * qty
+            pos["t2_hit"] = True
+            pos["qty"] -= qty
+            st.session_state.demo_history.insert(0, {"Time": indian_time(last_bar_time), "Side": side, "Entry": round(entry,2), "Exit": round(t2,2), "Qty": qty, "Reason": "TP2", "P&L": round(pnl,2)})
+
+        if not pos["t3_hit"] and ((side == "BUY" and last_high >= t3) or (side == "SELL" and last_low <= t3)):
+            qty = min(10, pos["qty"])
+            pnl = TARGET_3 * qty if side == "BUY" else -TARGET_3 * qty
+            pos["t3_hit"] = True
+            pos["qty"] -= qty
+            st.session_state.demo_history.insert(0, {"Time": indian_time(last_bar_time), "Side": side, "Entry": round(entry,2), "Exit": round(t3,2), "Qty": qty, "Reason": "TP3", "P&L": round(pnl,2)})
+
+        if pos["qty"] <= 0:
+            st.session_state.demo_position = None
+
+    # --------------------------------------------------------
+    # SCREEN METRICS (WITHOUT BALANCE)
+    # --------------------------------------------------------
+    c1, c2, c3 = st.columns(3)
+    c1.metric("SUPERTrend", "BUY 🟢" if int(last["TREND"]) == -1 else "SELL 🔴")
+    c2.metric("LAST CLOSED PRICE", show_price(last_close))
+    c3.metric("ACTIVE TRADES / STATUS", "Running" if pos else "Waiting")
+
+    st.write(f"**Confirmed 5-minute signal:** {last_signal or 'NO NEW FLIP'}")
+    st.write(f"**SuperTrend Line:** {show_price(last_st)}")
+
+    if st.session_state.demo_pending:
+        p = st.session_state.demo_pending
+        st.warning(f"⏳ DEMO LIMIT PENDING — {p['side']} @ {show_price(p['price'])}")
+
+    if pos:
+        st.success(f"OPEN DEMO {pos['side']} — Entry {show_price(pos['entry'])} — Qty {pos['qty']}")
+
+    # --------------------------------------------------------
+    # PERMANENT HISTORY TABLE
+    # --------------------------------------------------------
+    st.subheader("📜 DEMO TRADE HISTORY")
+    if st.session_state.demo_history:
+        st.dataframe(pd.DataFrame(st.session_state.demo_history), use_container_width=True, hide_index=True)
+    else:
+        st.info("No demo trades yet. Waiting for targets to hit...")
+
+    # TradingView Live Widget (Bitcoin Only)
+    st.subheader("📡 TRADINGVIEW LIVE MARKET")
+    components.html("""
+    <div style="display:flex;width:100%;">
+      <div class="tradingview-widget-container" style="width:100%;"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>{"symbol":"BINANCE:BTCUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}</script></div>
+    </div>
+    """, height=145, scrolling=False)
+    
 
     data = demo_get_candles()
     df_demo = demo_make_dataframe(data)
