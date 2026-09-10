@@ -437,6 +437,7 @@ def run_demo_account():
     c2.metric("REALIZED P&L", f"${st.session_state.demo_realized_pnl:,.2f}")
     c3.metric("SUPERTrend", "BUY 🟢" if int(last["TREND"]) == -1 else "SELL 🔴")
     c4.metric("LAST CLOSED PRICE", show_price(last_close))
+    last_close = float(last["close"])
 
     st.write(f"**Confirmed 5-minute signal:** {last_signal or 'NO NEW FLIP'}")
     st.write(f"**SuperTrend:** {show_price(last_st)}")
