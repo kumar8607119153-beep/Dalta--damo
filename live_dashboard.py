@@ -267,7 +267,22 @@ def demo_supertrend(df_in):
             df.loc[i, "SIGNAL"] = "SELL"
 
     return df
-
+def demo_init_state():
+    if "demo_balance" not in st.session_state:
+        st.session_state.demo_balance = 10000.0
+    if "demo_realized_pnl" not in st.session_state:
+        st.session_state.demo_realized_pnl = 0.0
+    if "demo_position" not in st.session_state:
+        st.session_state.demo_position = None
+    if "demo_pending" not in st.session_state:
+        st.session_state.demo_pending = None
+    if "demo_history" not in st.session_state:
+        st.session_state.demo_history = []
+    if "demo_last_signal_time" not in st.session_state:
+        st.session_state.demo_last_signal_time = 0
+    if "demo_last_processed_bar" not in st.session_state:
+        st.session_state.demo_last_processed_bar = 0
+        
 def run_demo_account():
     demo_init_state()
     
