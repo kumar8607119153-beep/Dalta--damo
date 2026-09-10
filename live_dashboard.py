@@ -308,7 +308,8 @@ def calculate_supertrend(df_in):
 # DEMO ACCOUNT ENGINE & HISTORY RECONSTRUCTION (REPLACE HERE)
 # ============================================================
 
-def demo_rebuild_historical_history(df_demo, b_offset, s_offset):
+def demo_rebuild_historical_history(df_demo):
+    
     history = []
     position = None
     pending = None
