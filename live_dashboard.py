@@ -399,18 +399,11 @@ def run_demo_account():
             pos["qty"] -= qty
             st.session_state.demo_history.insert(0, {"Time": indian_time(last_bar_time), "Side": side, "Entry": round(entry,2), "Exit": round(t2,2), "Qty": qty, "Reason": "TP2", "P&L": round(pnl,2)})
 
-        if not pos["t3_hit"] and ((side == "BUY" and last_high >= t3) or (side == "SELL" and last_low <= t3)):
-            qty = min(10, pos["qty"])
-            pnl = TARGET_3 * qty if side == "BUY" else -TARGET_3 * qty
-            pos["t3_hit"] = True
-            pos["qty"] -= qty
-            st.session_state.demo_history.insert(0, {"Time": indian_time(last_bar_time), "Side": side, "Entry": round(entry,2), "Exit": round(t3,2), "Qty": qty, "Reason": "TP3", "P&L": round(pnl,2)})
-
         if pos["qty"] <= 0:
             st.session_state.demo_position = None
 
     # --------------------------------------------------------
-    # SCREEN METRICS (WITHOUT BALANCE)
+    # SCREEN METRICS (STATUS)
     # --------------------------------------------------------
     c1, c2, c3 = st.columns(3)
     c1.metric("SUPERTrend", "BUY 🟢" if int(last["TREND"]) == -1 else "SELL 🔴")
@@ -428,21 +421,42 @@ def run_demo_account():
         st.success(f"OPEN DEMO {pos['side']} — Entry {show_price(pos['entry'])} — Qty {pos['qty']}")
 
     # --------------------------------------------------------
-    # PERMANENT HISTORY TABLE
+    # PERMANENT HISTORY TABLE (पुरानी ट्रेड हिस्ट्री यहाँ दिखेगी)
     # --------------------------------------------------------
-    st.subheader("📜 DEMO TRADE HISTORY")
+    st.markdown("---")
+    st.subheader("📜 DEMO TRADE HISTORY (ALL PREVIOUS TRADES)")
+    
     if st.session_state.demo_history:
-        st.dataframe(pd.DataFrame(st.session_state.demo_history), use_container_width=True, hide_index=True)
+        df_history = pd.DataFrame(st.session_state.demo_history)
+        
+        # कुल ट्रेड्स और कुल प्रॉफिट/लॉस का हिसाब
+        total_trades = len(df_history)
+        total_pnl = df_history["P&L"].sum() if "P&L" in df_history.columns else 0.0
+        
+        col_h1, col_h2 = st.columns(2)
+        col_h1.metric("Total Executed Trades", total_trades)
+        col_h2.metric("Total Demo P&L ($)", f"${total_pnl:,.2f}" if total_pnl >= 0 else f"-${abs(total_pnl):,.2f}")
+        
+        # ट्रेड हिस्ट्री की साफ़-सुथरी टेबल
+        st.dataframe(
+            df_history, 
+            use_container_width=True, 
+            hide_index=True
+        )
     else:
-        st.info("No demo trades yet. Waiting for targets to hit...")
+        st.info("No demo trades executed yet. Waiting for signals & targets to hit...")
 
-    # TradingView Live Widget (Bitcoin Only)
+    # --------------------------------------------------------
+    # TRADINGVIEW LIVE WIDGET AT THE VERY BOTTOM
+    # --------------------------------------------------------
+    st.markdown("---")
     st.subheader("📡 TRADINGVIEW LIVE MARKET")
     components.html("""
     <div style="display:flex;width:100%;">
       <div class="tradingview-widget-container" style="width:100%;"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>{"symbol":"BINANCE:BTCUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}</script></div>
     </div>
     """, height=145, scrolling=False)
+
     
 
     data = demo_get_candles()
