@@ -559,9 +559,24 @@ def run_demo_account():
     # --------------------------------------------------------
     # LIVE VIEW
     # --------------------------------------------------------
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("DEMO BALANCE", f"${st.session_state.demo_balance:,.2f}")
-    c2.metric("REALIZED P&L", f"${st.session_state.demo_realized_pnl:,.2f}")
+    # --------------------------------------------------------
+    # SCREEN METRICS (WITHOUT BALANCE)
+    # --------------------------------------------------------
+    c1, c2, c3 = st.columns(3)
+    c1.metric("SUPERTrend", "BUY 🟢" if int(last["TREND"]) == -1 else "SELL 🔴")
+    c2.metric("LAST CLOSED PRICE", show_price(last_close))
+    c3.metric("ACTIVE TRADES / STATUS", "Running" if pos else "Waiting")
+
+    st.write(f"**Confirmed 5-minute signal:** {last_signal or 'NO NEW FLIP'}")
+    st.write(f"**SuperTrend Line:** {show_price(last_st)}")
+
+    if st.session_state.demo_pending:
+        p = st.session_state.demo_pending
+        st.warning(f"⏳ DEMO LIMIT PENDING — {p['side']} @ {show_price(p['price'])}")
+
+    if pos:
+        st.success(f"OPEN DEMO {pos['side']} — Entry {show_price(pos['entry'])} — Qty {pos['qty']}")
+        
     c3.metric("SUPERTrend", "BUY 🟢" if int(last["TREND"]) == -1 else "SELL 🔴")
     c4.metric("LAST CLOSED PRICE", show_price(last_close))
     last_close = float(last["close"])
