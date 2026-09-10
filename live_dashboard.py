@@ -635,7 +635,7 @@ def run_demo_account():
     # historical Delta candles on the first load/restart. This means
     # old trades do not disappear when Streamlit session memory resets.
     if not st.session_state.demo_history:
-    historical_history = demo_rebuild_historical_history(
+        historical_history = demo_rebuild_historical_history(
         df_demo, DEFAULT_BUY_OFFSET, DEFAULT_SELL_OFFSET
     )
     st.session_state.demo_history = historical_history
