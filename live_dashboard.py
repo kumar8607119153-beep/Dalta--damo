@@ -306,42 +306,71 @@ def demo_supertrend(df_in):
     return df
 def demo_rebuild_historical_history(df_demo):
     """
-    Reconstruct previous DEMO trades from the available closed 5-minute candles.
-    This is intentionally derived from market candles, not from Streamlit session
-    memory, so old demo trades reappear after refresh/restart.
+    Reconstruct DEMO trade history from confirmed 5-minute
+    SuperTrend flips.
+
+    BUY  = SuperTrend bearish -> bullish
+    SELL = SuperTrend bullish -> bearish
+
+    Entry LIMIT:
+    BUY  = signal candle close - 50
+    SELL = signal candle close + 50
+
+    LIMIT is considered filled only when a later confirmed
+    candle touches the limit price.
     """
+
     history = []
     position = None
     pending = None
 
-    # Work only with confirmed candles.
     work = df_demo.reset_index(drop=True).copy()
 
     for i in range(len(work)):
+
         row = work.iloc[i]
+
         bar_time = int(row["time"])
         close = float(row["close"])
         high = float(row["high"])
         low = float(row["low"])
         signal = str(row["SIGNAL"])
 
-        # A new confirmed SuperTrend flip creates a LIMIT order.
+        # ====================================================
+        # 1. CONFIRMED SUPERTREND FLIP
+        # ====================================================
+
         if signal in ("BUY", "SELL"):
+
+            # Opposite signal cancels old pending LIMIT
             if pending and pending["side"] != signal:
                 pending = None
 
+            # New entry only when no position is active
+            # and no LIMIT order is already pending
             if position is None and pending is None:
-                limit_price = close - 50 if signal == "BUY" else close + 50
+
+                if signal == "BUY":
+                    limit_price = close - 50
+                else:
+                    limit_price = close + 50
+
                 pending = {
                     "side": signal,
                     "price": limit_price,
                     "signal_time": bar_time,
                 }
 
-        # Pending LIMIT can fill only on a later candle.
+        # ====================================================
+        # 2. CHECK PENDING LIMIT ON A LATER CANDLE
+        # ====================================================
+
         if pending and pending["signal_time"] != bar_time:
+
             fill_price = float(pending["price"])
+
             if low <= fill_price <= high:
+
                 position = {
                     "side": pending["side"],
                     "entry": fill_price,
@@ -351,10 +380,29 @@ def demo_rebuild_historical_history(df_demo):
                     "t2_hit": False,
                     "t3_hit": False,
                 }
+
+                # Record ONLY the actual filled entry
+                history.insert(
+                    0,
+                    {
+                        "Time": indian_time(bar_time),
+                        "Side": pending["side"],
+                        "Entry": round(fill_price, 2),
+                        "Exit": "-",
+                        "Qty": 30,
+                        "Reason": "SUPERTREND ENTRY",
+                        "P&L": 0.0,
+                    },
+                )
+
                 pending = None
 
-        # Track historical TP1 / TP2 / TP3 exactly like the demo engine.
+        # ====================================================
+        # 3. TARGET CALCULATION
+        # ====================================================
+
         if position:
+
             entry = float(position["entry"])
             side = position["side"]
 
@@ -367,46 +415,69 @@ def demo_rebuild_historical_history(df_demo):
                 t2 = entry - TARGET_2
                 t3 = entry - TARGET_3
 
+            # =================================================
+            # TP1
+            # =================================================
+
             if (
                 not position["t1_hit"]
                 and (
                     (side == "BUY" and high >= t1)
-                    or (side == "SELL" and low <= t1)
+                    or
+                    (side == "SELL" and low <= t1)
                 )
             ):
+
                 qty = min(10, position["qty"])
-                pnl = TARGET_1 * qty
-                if side == "SELL":
-                    pnl = -pnl
-                position["t1_hit"] = True
-                position["qty"] -= qty
-                history.insert(
-                    0,
-                    {
-                        "Time": indian_time(bar_time),
-                        "Side": side,
-                        "Entry": round(entry, 2),
-                        "Exit": round(t1, 2),
-                        "Qty": qty,
-                        "Reason": "TP1",
-                        "P&L": round(pnl, 2),
-                    },
-                )
+
+                if qty > 0:
+
+                    pnl = TARGET_1 * qty
+
+                    if side == "SELL":
+                        pnl = -pnl
+
+                    position["t1_hit"] = True
+                    position["qty"] -= qty
+
+                    history.insert(
+                        0,
+                        {
+                            "Time": indian_time(bar_time),
+                            "Side": side,
+                            "Entry": round(entry, 2),
+                            "Exit": round(t1, 2),
+                            "Qty": qty,
+                            "Reason": "TP1",
+                            "P&L": round(pnl, 2),
+                        },
+                    )
+
+            # =================================================
+            # TP2
+            # =================================================
 
             if (
                 not position["t2_hit"]
                 and (
                     (side == "BUY" and high >= t2)
-                    or (side == "SELL" and low <= t2)
+                    or
+                    (side == "SELL" and low <= t2)
                 )
             ):
+
                 qty = min(10, position["qty"])
+
                 if qty > 0:
+
                     pnl = TARGET_2 * qty
+
                     if side == "SELL":
                         pnl = -pnl
+
                     position["t2_hit"] = True
                     position["qty"] -= qty
+
                     history.insert(
                         0,
                         {
@@ -420,20 +491,31 @@ def demo_rebuild_historical_history(df_demo):
                         },
                     )
 
+            # =================================================
+            # TP3
+            # =================================================
+
             if (
                 not position["t3_hit"]
                 and (
                     (side == "BUY" and high >= t3)
-                    or (side == "SELL" and low <= t3)
+                    or
+                    (side == "SELL" and low <= t3)
                 )
             ):
+
                 qty = min(10, position["qty"])
+
                 if qty > 0:
+
                     pnl = TARGET_3 * qty
+
                     if side == "SELL":
                         pnl = -pnl
+
                     position["t3_hit"] = True
                     position["qty"] -= qty
+
                     history.insert(
                         0,
                         {
@@ -446,6 +528,10 @@ def demo_rebuild_historical_history(df_demo):
                             "P&L": round(pnl, 2),
                         },
                     )
+
+            # =================================================
+            # POSITION COMPLETED
+            # =================================================
 
             if position["qty"] <= 0:
                 position = None
