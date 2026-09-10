@@ -633,7 +633,11 @@ def run_demo_account():
     # IMPORTANT: Demo history is reconstructed from the available
     # historical Delta candles on the first load/restart. This means
     # old trades do not disappear when Streamlit session memory resets.
-    st.session_state.demo_history_initialized = True
+    if not st.session_state.demo_history:
+        historical_history = demo_rebuild_historical_history(df_demo)
+        st.session_state.demo_history = historical_history
+        st.session_state.demo_history_initialized = True
+            
 
 
     last = df_demo.iloc[-1]
