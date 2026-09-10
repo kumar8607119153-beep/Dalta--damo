@@ -542,7 +542,8 @@ def run_demo_account():
         st.error("Demo SuperTrend ke liye enough 5-minute candles nahi hain.")
         return
 
-    df_demo = demo_supertrend(df_demo)
+    df_demo = calculate_supertrend(df_demo)
+    
 
     # --------------------------------------------------------
     # OLD HISTORY BACKFILL
