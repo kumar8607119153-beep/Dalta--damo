@@ -35,6 +35,26 @@ ATR_PERIOD = 10
 MULTIPLIER = 3.0
 
 REFRESH_SECONDS = 1
+# ============================================================
+# INDIAN TIME FUNCTION (इसे सबसे ऊपर रखें)
+# ============================================================
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def indian_time(timestamp):
+    try:
+        ts = int(float(timestamp))
+        if ts > 10_000_000_000:
+            ts = ts // 1000
+        return datetime.fromtimestamp(
+            ts,
+            tz=timezone.utc
+        ).astimezone(IST).strftime(
+            "%Y-%m-%d %H:%M:%S IST"
+        )
+    except Exception:
+        return "-"
+
 
 def show_price(val):
     try:
