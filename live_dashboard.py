@@ -93,14 +93,14 @@ selected_tab = st.radio(
 )
 
 if selected_tab == "Watchlist":
-    st.title("📋 WATCHLIST (LIVE TICK)")
+    st.title("📋 WATCHLIST (LIVE TICK & LOGOS)")
 
     st.markdown("""
     <style>
     .watch-card {
         border: 1px solid rgba(128,128,128,.30);
         border-radius: 12px;
-        padding: 12px;
+        padding: 10px;
         margin-bottom: 10px;
         background: rgba(128,128,128,.08);
     }
@@ -108,7 +108,7 @@ if selected_tab == "Watchlist":
     """, unsafe_allow_html=True)
 
     components.html("""
-    <div style="display:flex; flex-direction:column; gap:10px; width:100%;">
+    <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
       <div class="watch-card">
         <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
         {"symbol":"BINANCE:BTCUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
@@ -116,19 +116,24 @@ if selected_tab == "Watchlist":
       </div>
       <div class="watch-card">
         <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-        {"symbol":"NSE:NIFTY","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
+        {"symbol":"BINANCE:ETHUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
         </script>
       </div>
       <div class="watch-card">
         <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-        {"symbol":"NSE:BANKNIFTY","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
+        {"symbol":"BINANCE:TAOUSDT","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
+        </script>
+      </div>
+      <div class="watch-card">
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+        {"symbol":"OANDA:XAUUSD","width":"100%","colorTheme":"dark","isTransparent":true,"locale":"en"}
         </script>
       </div>
     </div>
-    """, height=350, scrolling=False)
+    """, height=520, scrolling=False)
 
     st.stop()
-
+    
 
 # ============================================================
 # DEMO ACCOUNT — COMPLETELY SEPARATE SYSTEM
