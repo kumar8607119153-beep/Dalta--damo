@@ -183,10 +183,10 @@ if selected_tab == "Watchlist":
 # - Only the Demo account logic/UI lives in this block.
 # ============================================================
 
-DEMO_QTY = 30
-DEMO_TP1_QTY = 15
-DEMO_TP2_QTY = 9
-DEMO_TP3_QTY = 6
+DEMO_QTY = 0.001
+DEMO_TP1_QTY = 0.0005
+DEMO_TP2_QTY = 0.0003
+DEMO_TP3_QTY = 0.0002
 
 
 def _demo_close_time(bar_time):
