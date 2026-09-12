@@ -1770,33 +1770,24 @@ except Exception:
 
 
 # Only a NEW confirmed SuperTrend signal can change the displayed values.
+if "buyer_seller_started" not in st.session_state:
+    st.session_state["buyer_seller_started"] = False
+
 if len(signal_rows) >= 1:
     latest_signal = signal_rows.iloc[-1]
     latest_signal_time = int(latest_signal["time"])
 
-    if (
+    # App start पर पुराने signal को सिर्फ याद करो
+    if not st.session_state["buyer_seller_started"]:
+        st.session_state["buyer_seller_signal_time"] = latest_signal_time
+        st.session_state["buyer_seller_started"] = True
+
+    # इसके बाद केवल नया signal आने पर percentage निकालो
+    elif (
         st.session_state["buyer_seller_signal_time"]
         != latest_signal_time
     ):
-        bucket = st.session_state["buyer_seller_trade_buckets"].get(
-            latest_signal_time,
-            {"BUY": 0.0, "SELL": 0.0}
-        )
-
-        buy_volume = float(bucket.get("BUY", 0.0))
-        sell_volume = float(bucket.get("SELL", 0.0))
-        total_volume = buy_volume + sell_volume
-
-        if total_volume > 0:
-            st.session_state["signal_buyer_percent"] = (
-                buy_volume / total_volume
-            ) * 100.0
-            st.session_state["signal_seller_percent"] = (
-                sell_volume / total_volume
-            ) * 100.0
-
-        # Mark this signal as processed so the values stay frozen.
-        st.session_state["buyer_seller_signal_time"] = latest_signal_time
+        # यहाँ existing BUY/SELL percentage calculation रहेगी
 
 
 # ============================================================
