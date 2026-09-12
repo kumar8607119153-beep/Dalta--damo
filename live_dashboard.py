@@ -103,7 +103,7 @@ DEFAULT_ORDER_SIZE = int(
 # LIMIT pending रहने के बाद कितने seconds में MARKET करना है.
 # 0 = automatic MARKET conversion बंद.
 DEFAULT_LIMIT_TIMEOUT = int(
-    os.getenv("LIMIT_TIMEOUT", "60")
+    os.getenv("LIMIT_TIMEOUT", "60000")
 )
 
 TARGET_1 = int(os.getenv("TARGET_1", "300"))
